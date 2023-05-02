@@ -1,8 +1,4 @@
-#dependencies
-node_modules/
-#folders
-artifacts/
-cache/
-typechain-types/
-#files
-yarn.lock
+artifacts
+cache
+typechain-types
+node_modules
