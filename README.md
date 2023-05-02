@@ -1,4 +1,5 @@
 <h1> FUSYONA NFT Marketplace <h1/>
+
 # Marketplace Contract
  ## Overview
 The Marketplace Contract is a Solidity smart contract that enables users to buy and sell NFTs (non-fungible tokens) on the Ethereum blockchain. Users can list their NFTs for sale and buyers can purchase them using ETH (Ether). The contract supports offers, where a buyer can make an offer for a listed NFT.
