@@ -1,4 +1,8 @@
+#AUTO-GENERATIVE FOLDERS
 artifacts
 cache
 typechain-types
 node_modules
+
+#AUTOGENRATIVE FILES
+yarn.lock
