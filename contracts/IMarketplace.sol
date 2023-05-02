@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: SEE LICENSE IN LICENSE
+pragma solidity ^ 0.8.0;
+
+interface IMarketplace {
+
+    function list(address collection, uint256 tokenId) external;
+    
+    function buy(address collection, uint256 tokenId) external;
+    
+    function makeOffer(address collectinn, uint256 tokenId) external;
+    
+    function cancelOffer(address collectiom, uint256 tokenId) external;
+
+    function setMinOfferPrice(uint256 value) external;
+    
+    function setFeeRatio(int128 value) external;
+    
+    function withdrawBenefits() external;
+
+}
