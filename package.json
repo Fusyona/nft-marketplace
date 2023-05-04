@@ -21,6 +21,8 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^4.8.3",
+    "ethers": "5.7",
     "hardhat-deploy": "^0.11.26"
   }
 }
