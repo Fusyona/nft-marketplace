@@ -20,7 +20,7 @@ class Marketplace {
             const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
             const nftsListed = allNFTListedEventEmitted.length;
             const nftsSold = allNFTSoldEventEmitted.length;
-            return nftsListed >= nftsSold ? (nftsListed-nftsSold).toString(): "error";
+            return nftsListed >= nftsSold ? (nftsListed-nftsSold).toString(): "0";
         }catch(error:any){
             throw error;
         }
