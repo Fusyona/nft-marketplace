@@ -41,8 +41,8 @@ describe("Testing Marketplace Smart Contract", () => {
     it("A NFT should be listed using list function.", async () => {
         const marketplace = new Marketplace(marketplaceDeployment.address, signer);
         
-        const currentLiquidity = await marketplace.totalOfNFTListed();
-        const _currentLiquidity = BN.from(currentLiquidity).toNumber();
+        const tvlBeforeList = await marketplace.totalOfNFTListed();
+        const _tvlBeforeList = BN.from(tvlBeforeList).toNumber();
 
         const collectionAddress = mockERC1155CollectionDeployment.address;
         const nftId = "1";
@@ -53,10 +53,9 @@ describe("Testing Marketplace Smart Contract", () => {
         await mockCollection.setApprovalForAll(marketplace.contractAddress, true);
         await marketplace.list(collectionAddress, nftId, price.toString());  
 
-        const liquidityAfterList = await marketplace.totalOfNFTListed();
-        const _liquidityAfterList = BN.from(liquidityAfterList).toNumber();
-        
-        expect(_liquidityAfterList, "This value should be increased in plus one.").greaterThan(_currentLiquidity);
+        const tvlAfterList = await marketplace.totalOfNFTListed();
+        const _tvlAfterList = BN.from(tvlAfterList).toNumber();
+        assert.equal(_tvlAfterList, _tvlBeforeList + 1, "_tvlAfterList should be increased plus one");
     });
 
 
