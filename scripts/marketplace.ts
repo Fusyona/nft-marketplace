@@ -3,6 +3,7 @@ import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
 import { EventFilter, Event, Contract, Signer } from "ethers";
 import { LogDescription } from "@ethersproject/abi";
+import { throws } from "assert";
 
 
 class Marketplace {
@@ -20,7 +21,10 @@ class Marketplace {
             const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
             const nftsListed = allNFTListedEventEmitted.length;
             const nftsSold = allNFTSoldEventEmitted.length;
-            return nftsListed >= nftsSold ? (nftsListed-nftsSold).toString(): "0";
+            if (nftsListed < nftsSold) {
+                throw Error("Error because NFTSold is greater than NFTListed.");
+            }
+            return (nftsListed-nftsSold).toString();
         }catch(error:any){
             throw error;
         }
