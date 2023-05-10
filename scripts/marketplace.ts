@@ -26,6 +26,7 @@ class Marketplace {
             }
             return (nftsListed-nftsSold).toString();
         }catch(error:any){
+            console.error(error.message);
             throw error;
         }
     }
