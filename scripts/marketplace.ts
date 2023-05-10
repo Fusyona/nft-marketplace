@@ -22,7 +22,7 @@ class Marketplace {
             const nftsListed = allNFTListedEventEmitted.length;
             const nftsSold = allNFTSoldEventEmitted.length;
             if (nftsListed < nftsSold) {
-                throw Error("Error because NFTSold is greater than NFTListed.");
+                throw new Error("Error: NFTSold is greater than NFTListed.");
             }
             return (nftsListed-nftsSold).toString();
         }catch(error:any){
