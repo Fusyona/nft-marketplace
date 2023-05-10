@@ -13,7 +13,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
     beforeEach(async () => {
         await getDeployments();
-        await getInstances();
+        await setInstances();
         await defaultSigner();
         
     });
@@ -27,7 +27,7 @@ describe("Testing Marketplace Smart Contract", () => {
         await deployments.fixture(["Marketplace", "MockERC1155Collection"]);   
     }
 
-    async function getInstances() {
+    async function setInstances() {
         marketplaceDeployment = await deployments.get("Marketplace");
         mockERC1155CollectionDeployment = await deployments.get("MockERC1155Collection");
     }
