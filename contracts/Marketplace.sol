@@ -44,8 +44,8 @@ contract Marketplace is IMarketplace, ERC1155Holder {
     }
 
     function _isListed(address collection, uint256 nftId) private view returns (bool) {
-        (bool listed, , ,  ) = getListing(collection, nftId);
-        return listed;
+        NFTForSale memory nftTarget = nftsListed[collection][nftId];
+        return nftTarget.listed;
     }
 
     function _isTheOwner(address seller, address collection, uint256 nftId) private view returns (bool) {
@@ -57,19 +57,5 @@ contract Marketplace is IMarketplace, ERC1155Holder {
         return price > 0;
     } 
 
-    function getListing(address collection, uint256 nftId) public view returns (
-        bool, 
-        uint256, 
-        address, 
-        address[] memory
-    ) {
-        NFTForSale storage nftForSale = nftsListed[collection][nftId];
-        return (
-            nftForSale.listed,
-            nftForSale.price,
-            nftForSale.seller,
-            nftForSale.offers
-            );
-    }
 }
 
