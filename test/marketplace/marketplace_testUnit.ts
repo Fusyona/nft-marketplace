@@ -77,7 +77,7 @@ describe("Testing Marketplace Smart Contract", () => {
         const tvlAfterList = await marketplace.totalOfNFTListed();
         const _tvlAfterList = BN.from(tvlAfterList).toNumber();
        
-        assert.equal(_tvlAfterList, _tvlBeforeList + 2, "_tvlAfterList should be increased plus one");
+        assert.equal(_tvlAfterList, _tvlBeforeList + 2, "_tvlAfterList should be increased plus two");
     });
 
     it("An exception should revert if an user try to list twice the same NFT.", async () => {
