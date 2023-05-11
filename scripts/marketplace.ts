@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
 import { EventFilter, Event, Contract, Signer } from "ethers";
 import { LogDescription } from "@ethersproject/abi";
-import { throws } from "assert";
+
 
 
 class Marketplace {
