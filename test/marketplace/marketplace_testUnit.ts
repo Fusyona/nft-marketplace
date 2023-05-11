@@ -12,7 +12,7 @@ describe("Testing Marketplace Smart Contract", () => {
     let BN = BigNumber;
 
     beforeEach(async () => {
-        await getDeployments();
+        await deployments.fixture(["Marketplace", "MockERC1155Collection"]); 
         await setInstances();
         await defaultSigner();
         
@@ -21,10 +21,6 @@ describe("Testing Marketplace Smart Contract", () => {
     async function defaultSigner() {
         const signers = await ethers.getSigners();
         signer = signers[0];
-    }
-
-    async function getDeployments() {
-        await deployments.fixture(["Marketplace", "MockERC1155Collection"]);   
     }
 
     async function setInstances() {
