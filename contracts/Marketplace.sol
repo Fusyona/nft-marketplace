@@ -19,7 +19,8 @@ contract Marketplace is IMarketplace, ERC1155Holder {
     mapping(address => mapping(uint256 => NFTForSale)) public nftsListed;
 
     event NFTListed(address indexed seller, address indexed collection, uint256 nftId, uint256 price);
-    
+    event NFTSold(address indexed buyer, address indexed seller, address indexed collection, uint256 nftId, uint256 price);
+
     constructor() {
         
     }

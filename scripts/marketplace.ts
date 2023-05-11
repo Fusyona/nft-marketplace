@@ -1,9 +1,9 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Hash } from "crypto";
+
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
 import { EventFilter, Event, Contract, Signer } from "ethers";
 import { LogDescription } from "@ethersproject/abi";
+
 
 
 class Marketplace {
@@ -15,21 +15,27 @@ class Marketplace {
         this.signer = signer;
     }
 
-    async liquidity(): Promise<String> {
+    async totalOfNFTListed(): Promise<String> {
         try{
-            const allNFTListedEventsEmitted = await this.getEvents("NFTListed");
-            const totalOfNFTListed = allNFTListedEventsEmitted.length;
-            return totalOfNFTListed.toString();
-        }catch(error){
+            const allNFTListedEventEmitted = await this.getEvents("NFTListed");
+            const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
+            const nftsListed = allNFTListedEventEmitted.length;
+            const nftsSold = allNFTSoldEventEmitted.length;
+            if (nftsListed < nftsSold) {
+                throw new Error("Error: NFTSold is greater than NFTListed.");
+            }
+            return (nftsListed-nftsSold).toString();
+        }catch(error:any){
+            console.error(error.message);
             throw error;
         }
     }
 
-    async list(collectionAddress:Address, nftId:string): Promise<String> {
+    async list(collectionAddress:Address, nftId:string, price:string): Promise<String> {
         try{
-            const receipt:Receipt = (await this.instance()).list(collectionAddress, nftId);
-            return this.plotUri(receipt);
-        }catch(error){
+            const receipt = await (await this.instance()).list(collectionAddress, nftId, price);
+            return this.plotUri(await receipt.wait());
+        }catch(error:any){
             throw error;
         }
         
@@ -40,7 +46,7 @@ class Marketplace {
     }
 
     uriScanner(txHash:string) {
-        return `https://mumbai.polygonscan.com/${txHash}`;
+        return `https://mumbai.polygonscan.com/tx/${txHash}`;
     }
 
     private async getEvents(eventName: string): Promise<LogDescription[]> {
@@ -55,8 +61,12 @@ class Marketplace {
     }
 
     private async instance(): Promise<Contract> {
-        const instanceRetrieved = await ethers.getContractAt("Marketplace", this.contractAddress, this.signer);
-        return instanceRetrieved;
+        try {
+            const instanceRetrieved = await ethers.getContractAt("Marketplace", this.contractAddress, this.signer);
+            return instanceRetrieved;
+        }catch(error:any){
+            throw error;
+        }
     }
 }
 
