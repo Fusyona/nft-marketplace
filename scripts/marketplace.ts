@@ -3,6 +3,7 @@ import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
 import { EventFilter, Event, Contract, Signer } from "ethers";
 import { LogDescription } from "@ethersproject/abi";
+import { log } from "console";
 
 
 
@@ -49,14 +50,9 @@ class Marketplace {
         return `https://mumbai.polygonscan.com/tx/${txHash}`;
     }
 
-    private async getEvents(eventName: string): Promise<LogDescription[]> {
+    private async getEvents(eventName: string): Promise<Event[]> {
         const marketplaceInstance: Contract = await this.instance();
-        const filter: EventFilter = {
-            address: marketplaceInstance.address,
-            topics: marketplaceInstance.filters[eventName]().topics,
-        };
-        const logs = await marketplaceInstance.provider.getLogs(filter);
-        const events = logs.map(log => marketplaceInstance.interface.parseLog(log));
+        const events = await marketplaceInstance.queryFilter(eventName);
         return events;
     }
 
