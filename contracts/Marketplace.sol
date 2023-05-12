@@ -4,11 +4,14 @@ pragma solidity  ^0.8.0;
 import "./IMarketplace.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "./ABDKMath64x64.sol";
 
 contract Marketplace is IMarketplace, ERC1155Holder {
+    using ABDKMath64x64 for int128;
+    int128 public fee;    
 
-    uint256 ONE_COPY = 1;    
-
+    uint256 ONE_COPY = 1;
+    
     struct NFTForSale {
         bool listed;
         uint256 price;
@@ -23,6 +26,43 @@ contract Marketplace is IMarketplace, ERC1155Holder {
 
     constructor() {
         
+    }
+
+    receive() external payable{}
+
+    function buy(address collection, uint256 nftId) external override payable {
+        NFTForSale memory nft = nftsListed[collection][nftId];
+        address buyer = msg.sender;
+        uint256 moneyReceived = msg.value;
+        uint256 moneyRequired = nft.price;
+        require(_purchaseRequirements(collection, nftId, moneyReceived, moneyRequired), "Marketplace: Error in the purchase.");
+        delete nftsListed[collection][nftId];
+        _transferRemaining(buyer, moneyReceived, moneyRequired);
+        _payingBenefits(nft.seller, moneyRequired);
+        IERC1155 ierc1155 = IERC1155(collection);
+        ierc1155.safeTransferFrom(address(this), msg.sender, nftId, ONE_COPY, "");
+        emit NFTSold(msg.sender, nft.seller, collection, nftId, nft.price);
+
+    } 
+
+    function _purchaseRequirements(address collection, uint256 nftId, uint256 moneyReceived, uint256 moneyRequired) private view returns (bool) {
+        return _isListed(collection, nftId) && (moneyReceived >= moneyRequired);
+    } 
+
+    function _transferRemaining(address user, uint256 moneyReceived, uint256 moneyRequired) private {
+    uint256 remaining = moneyReceived - moneyRequired;
+    if (remaining > 0) {
+        payable(user).transfer(remaining);
+        }
+    }
+    
+    function _payingBenefits(address seller, uint256 moneyRequired) private {
+        uint256 fusyonaFee = _fusyonaFee(moneyRequired);
+        payable(seller).transfer(moneyRequired - fusyonaFee);
+    }
+
+    function _fusyonaFee(uint256 netPayment) public view returns(uint256) {
+        return fee.mulu(netPayment);
     }
 
     function list(address collection, uint256 nftId, uint256 price) public override {
