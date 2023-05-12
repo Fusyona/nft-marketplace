@@ -1,7 +1,7 @@
 
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
-import { EventFilter, Event, Contract, Signer } from "ethers";
+import { EventFilter, Event, Contract, Signer, BigNumber } from "ethers";
 import { LogDescription } from "@ethersproject/abi";
 import { log } from "console";
 
@@ -40,6 +40,29 @@ class Marketplace {
             throw error;
         }
         
+    }
+
+    async buy(collectionAddress:Address, nftId: string): Promise<String> {
+        try{
+            const [,price, ,] = await this.getDataNFT(collectionAddress, nftId);
+            const receipt = await (await this.instance()).buy(collectionAddress, nftId, {value: price});
+            return this.plotUri(await receipt.wait());
+        }catch(error:any){
+            throw error;
+        }
+    }
+
+    async getDataNFT(collectionAddress:Address, nftId1:string) {
+        try{
+            const dataNFT = await (await this.instance()).nftsListed(collectionAddress, nftId1);
+            if (dataNFT.listed === false) {
+                throw new Error("NFT has not been listed yet");
+            }else {
+                return dataNFT;
+            }
+        }catch(error:any){
+            throw new Error(error.message);
+        }
     }
 
     private plotUri(receipt: Receipt) {
