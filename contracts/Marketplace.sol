@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity  ^0.8.0;
 
-import "./IMarketplace.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "./IMarketplace.sol";
 import "./ABDKMath64x64.sol";
+import "./MathFees.sol";
 
-contract Marketplace is IMarketplace, ERC1155Holder {
+contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     using ABDKMath64x64 for int128;
-    int128 public fee;    
+    using MathFees for int128;
+
+    int128 public feeRatio = MathFees._5percent();    
 
     uint256 ONE_COPY = 1;
     
@@ -29,6 +33,13 @@ contract Marketplace is IMarketplace, ERC1155Holder {
     }
 
     receive() external payable{}
+
+    function setFeeRatio(int128 _percentageMultipliedBy2Up64AndTwoDecimals) external onlyOwner {
+        require(_percentageMultipliedBy2Up64AndTwoDecimals._verifyFeeRatioBounds());  
+        int128 _feeRatio = _percentageMultipliedBy2Up64AndTwoDecimals._computeFeeRatio();
+        require(feeRatio != _feeRatio, "Marketplace: You are trying to set the same feeRatio.");
+        feeRatio =_feeRatio;
+  }
 
     function buy(address collection, uint256 nftId) external override payable {
         NFTForSale memory nft = nftsListed[collection][nftId];
@@ -62,7 +73,7 @@ contract Marketplace is IMarketplace, ERC1155Holder {
     }
 
     function _fusyonaFee(uint256 netPayment) public view returns(uint256) {
-        return fee.mulu(netPayment);
+        return feeRatio.mulu(netPayment);
     }
 
     function list(address collection, uint256 nftId, uint256 price) public override {
