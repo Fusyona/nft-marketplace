@@ -10,6 +10,8 @@ describe("Testing Marketplace Smart Contract", () => {
     let mockERC1155CollectionDeployment:Deployment;
     
     let BN = BigNumber;
+    const twoUp64 = BN.from(2).pow(64);
+    const _5percent = BN.from(5).mul(twoUp64).div(BN.from(100));
 
     beforeEach(async () => {
         await deployments.fixture(["Marketplace", "MockERC1155Collection"]); 
@@ -41,13 +43,27 @@ describe("Testing Marketplace Smart Contract", () => {
     async function tApprove(marketplace:Marketplace) {
         const collectionAddress = mockERC1155CollectionDeployment.address;
         const mockCollection = await ethers.getContractAt("ERC1155", collectionAddress);
-        await mockCollection.setApprovalForAll(marketplace.contractAddress, true);
-        
+        try{
+            await mockCollection.setApprovalForAll(marketplace.contractAddress, true);
+        }catch(error){
+            throw error;
+        }
     }
 
     async function tList(marketplace:Marketplace, collectionAddress:Address, nftId:string, price:string){
         await marketplace.list(collectionAddress, nftId, price);  
     }
+
+    async function tBalanceOf(account:Address, nftId:string) {
+        const collectionAddress = mockERC1155CollectionDeployment.address;
+        const mockCollection = await ethers.getContractAt("ERC1155", collectionAddress);
+        try {
+            return await mockCollection.balanceOf(account, nftId);
+        }catch(error) {
+            console.error(error);
+        }
+
+        }
 
     it("Marketplace should be deployed, therefore, it has linked an address", async () =>  {
         const zeroAddress = ethers.constants.AddressZero;
@@ -126,8 +142,9 @@ describe("Testing Marketplace Smart Contract", () => {
     
     });
     
-    describe("Buy function's tests", () => {
-        it("When a buyer pay the price of a NFT listed, the Marketplace send the NFT's ownership to buyer and the value of the item is transfered to seller", async () => {
+    describe(
+        "Buy function's tests", () => {
+        it("If one NFT is bought then the totalOfNFT listed should decrease in less one.", async () => {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
@@ -147,6 +164,130 @@ describe("Testing Marketplace Smart Contract", () => {
 
 
         });
+
+        it("After the purchase the Marketplace's ether balance should be equal to 5%NFTprice.", async () => {
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+            const actualBalanceOfMarketplaceBeforeBuy = await ethers.provider.getBalance(marketplace.contractAddress);
+            
+            const expectedBalanceOfMarketplace = actualBalanceOfMarketplaceBeforeBuy.add(price.mul(_5percent).div(twoUp64));
+
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
+
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            
+            await marketplace.buy(collectionAddress, nftId);
+            
+            const actualBalanceOfMarketplace = await ethers.provider.getBalance(marketplace.contractAddress);
+            assert.equal(actualBalanceOfMarketplace.toString(), expectedBalanceOfMarketplace.toString(), "The balance of Marketplace is not equal to 5%NFTprice.");
+            
+        });
+        
+        it("After the purchase the Seller's ether balance should increase in NFTprice - 5%NFTprice.", async ()=> {
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;            
+            const _5percentPrice = _5percent.mul(price).div(twoUp64);
+            
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
+            
+            const balanceOfSellerAfterList = await ethers.provider.getBalance(await signer.getAddress());
+            const expectedBalanceOfSeller = balanceOfSellerAfterList.add(price.sub(_5percentPrice));
+            
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            
+            await marketplace.buy(collectionAddress, nftId);
+            
+            const actualBalanceOfSeller = await ethers.provider.getBalance(await signer.getAddress());
+            assert.equal(actualBalanceOfSeller.toString(), expectedBalanceOfSeller.toString(), "The balance of Seller is not equal to NFTprice - 5%NFTprice.");
+            
+        });
+
+        it("Buyer's NFT balance previously to the purchase should be equal to 0.", async ()=> {
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+
+            const collectionAddress = mockERC1155CollectionDeployment.address;            
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
+            
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            const balanceOfBuyerInNFT = (await tBalanceOf(buyer.address, nftId))?.toString();
+            
+            assert.equal(balanceOfBuyerInNFT, "0", "Buyer's NFT balance previusly to the purschase should be equal to 0.");
+            
+        
+        });
+
+        it("Buyer's NFT balance after the purschase should increase in plus one.", async ()=> {
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+
+            const collectionAddress = mockERC1155CollectionDeployment.address;            
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
+            
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            
+            await marketplace.buy(collectionAddress, nftId);
+            
+            const balanceOfBuyerInNFT = (await tBalanceOf(buyer.address, nftId))?.toString();
+            assert.equal(balanceOfBuyerInNFT, "1", "Buyer's NFT balance previusly to the purschase should be equal to 0.");
+            
+        });
+
+        it("If the buyer haven't enough money to purchase the NFT at its price, the transacton should revert.", async () =>{  
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const nftId = "1";
+            const price = ethers.utils.parseEther("10000.1");
+
+            const collectionAddress = mockERC1155CollectionDeployment.address;            
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
+            
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            
+            try{
+                await marketplace.buy(collectionAddress, nftId);
+            }catch(error:any) {
+                expect (error.message);
+                return;
+            }
+            expect.fail("Expected an error to be thrown");
+
+        });
+
+        it("If a buyer try to buy an unlisted token, the transaction should revert.", async () => {
+     
+            const collectionAddress = mockERC1155CollectionDeployment.address;            
+            const buyer = await getAnotherSigner(1);
+            const marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            const nftId = "1";
+            try {
+                await marketplace.buy(collectionAddress, nftId);
+            }catch(error:any) {
+                expect (error.message).to.equal("NFT has not been listed yet");
+                return;
+            }
+            expect.fail("Expected an error to be thrown");
+        });
+
+
+
+
     });
 
 });
