@@ -12,22 +12,32 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     using ABDKMath64x64 for int128;
     using MathFees for int128;
 
-    int128 public feeRatio = MathFees._2percent();    
+    int128 public feeRatio = MathFees._npercent(int128(2));    
+    int128 public floorRatio = MathFees._npercent(int128(20));
 
     uint256 ONE_COPY = 1;
+    uint64 constant ONE_DAY_IN_SECONDS = 24*60*60;
     
     struct NFTForSale {
         bool listed;
         uint256 price;
         address seller;
-        address[] offers;
+        mapping (uint256 => Offer) offers;
+        uint256 totalOffers;
+    }
+
+    struct Offer {
+        address buyer;
+        uint256 priceOffer;
+        uint64 expirationDate;
     }
 
     mapping(address => mapping(uint256 => NFTForSale)) public nftsListed;
 
     event NFTListed(address indexed seller, address indexed collection, uint256 nftId, uint256 price);
     event NFTSold(address indexed buyer, address indexed seller, address indexed collection, uint256 nftId, uint256 price);
-
+    event OfferMade(address indexed buyer, address indexed collection, uint256 indexed nftId, uint256 priceOffer);
+    
     constructor() {
         
     }
@@ -41,8 +51,35 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         feeRatio =_feeRatio;
   }
 
+    function makeOffer(address collection, uint256 nftId, uint64 durationInDays) external override payable {
+        uint256 priceOffer = msg.value;
+        require(_makeOfferRequirements(collection, nftId, priceOffer), "Marketplace: Error trying to make an offer.");
+        address buyer = msg.sender;
+        Offer memory offer = Offer(
+            {
+            buyer: buyer, 
+            priceOffer: priceOffer, 
+            expirationDate: uint64(block.timestamp) + durationInDays*ONE_DAY_IN_SECONDS
+            });
+        NFTForSale storage nft = nftsListed[collection][nftId];
+        nft.offers[nft.totalOffers] = offer;
+        nft.totalOffers +=1; 
+        emit OfferMade(buyer, collection, nftId, priceOffer);
+    }
+
+    function _makeOfferRequirements(address collection, uint256 nftId, uint256 priceOffer) private view returns(bool){
+        return _isListed(collection, nftId) && priceOffer >= minPriceOffer(collection, nftId);
+    }
+
+    function minPriceOffer(address collectinn, uint256 nftId) public view returns(uint256) {
+        NFTForSale storage nft = nftsListed[collectinn][nftId];
+        uint256 currentPrice = nft.price;
+        return currentPrice - floorRatio.mulu(currentPrice);
+    }
+    
+
     function buy(address collection, uint256 nftId) external override payable {
-        NFTForSale memory nft = nftsListed[collection][nftId];
+        NFTForSale storage nft = nftsListed[collection][nftId];
         address buyer = msg.sender;
         uint256 moneyReceived = msg.value;
         uint256 moneyRequired = nft.price;
@@ -81,11 +118,10 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         require(_listedRequirements(seller, collection, nftId, price), "Marketplace: Error when listed");
         IERC1155 ierc1155 = IERC1155(collection);
         ierc1155.safeTransferFrom(seller, address(this), nftId, ONE_COPY, "");
-        NFTForSale memory newNFTforListing;
+        NFTForSale storage newNFTforListing = nftsListed[collection][nftId];
         newNFTforListing.listed = true;
         newNFTforListing.price = price;
         newNFTforListing.seller = seller;
-        nftsListed[collection][nftId] = newNFTforListing;
         emit NFTListed(seller, collection, nftId, price);
     }
 
@@ -95,7 +131,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     }
 
     function _isListed(address collection, uint256 nftId) private view returns (bool) {
-        NFTForSale memory nftTarget = nftsListed[collection][nftId];
+        NFTForSale storage nftTarget = nftsListed[collection][nftId];
         return nftTarget.listed;
     }
 
