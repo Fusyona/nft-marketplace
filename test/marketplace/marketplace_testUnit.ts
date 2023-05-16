@@ -285,7 +285,7 @@ describe("Testing Marketplace Smart Contract", () => {
             expect.fail("Expected an error to be thrown");
         });
 
-        it("After unlisted a NFT is not possible make the same purchase, avoiding double spent.", async () => {
+        it("After unlisted a NFT it's not possible make the same purchase, avoiding double spent.", async () => {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
