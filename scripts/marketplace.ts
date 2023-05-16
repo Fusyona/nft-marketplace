@@ -5,6 +5,19 @@ import { EventFilter, Event, Contract, Signer, BigNumber } from "ethers";
 
 
 
+interface NFTForSale {
+    listed: Boolean;
+    price: BigNumber;
+    seller: Address;
+    offers: Record<string,Offer>;
+    totalOffers: BigNumber;
+}
+
+interface Offer {
+    buyer:Address;
+    priceOffer: BigNumber;
+    expirationDate: number;    
+}
 
 class Marketplace {
     contractAddress: Address;
@@ -43,17 +56,35 @@ class Marketplace {
 
     async buy(collectionAddress:Address, nftId: string): Promise<String> {
         try{
-            const [,price, ,] = await this.getDataNFT(collectionAddress, nftId);
-            const receipt = await (await this.instance()).buy(collectionAddress, nftId, {value: price});
+            const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+            const receipt = await (await this.instance()).buy(collectionAddress, nftId, {value: dataNFT.price});
             return this.plotUri(await receipt.wait());
         }catch(error:any){
             throw error;
         }
     }
 
-    async getDataNFT(collectionAddress:Address, nftId1:string) {
+    async makeOffer(collectionAddress:Address, nftId:string, priceOffer:string): Promise<String> {
         try{
-            const dataNFT = await (await this.instance()).nftsListed(collectionAddress, nftId1);
+            const receipt = await (await this.instance()).makeOffer(collectionAddress, nftId, {value: priceOffer});
+            return this.plotUri(await receipt.wait());
+        }catch(error:any) {
+            throw error;
+        }
+    }
+
+    async offersOf(collectionAddress:Address, nftId:string):Promise<String> {
+        try{
+            const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+            return dataNFT.totalOffers.toString();
+        }catch(error:any) {
+            throw error;
+        }
+    }
+
+    async getDataNFT(collectionAddress:Address, nftId1:string):Promise<NFTForSale> {
+        try{
+            const dataNFT:NFTForSale = await (await this.instance()).nftsListed(collectionAddress, nftId1);
             if (dataNFT.listed === false) {
                 throw new Error("NFT has not been listed yet");
             }else {
