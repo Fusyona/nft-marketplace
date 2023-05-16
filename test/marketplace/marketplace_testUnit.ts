@@ -40,6 +40,10 @@ describe("Testing Marketplace Smart Contract", () => {
         mockERC1155CollectionDeployment = await deployments.get("MockERC1155Collection");
     }
 
+    async function tMakeOffer(marketplace: Marketplace, collectionAddress:Address, nftId:string, priceOffer:string){
+        await marketplace.makeOffer(collectionAddress, nftId, priceOffer);
+    }
+
     async function tApprove(marketplace:Marketplace) {
         const collectionAddress = mockERC1155CollectionDeployment.address;
         const mockCollection = await ethers.getContractAt("ERC1155", collectionAddress);
@@ -142,8 +146,7 @@ describe("Testing Marketplace Smart Contract", () => {
     
     });
     
-    describe(
-        "Buy function's tests", () => {
+    describe("Buy function's tests", () => {
         it("If one NFT is bought then the totalOfNFT listed should decrease in less one.", async () => {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
@@ -311,9 +314,27 @@ describe("Testing Marketplace Smart Contract", () => {
             
         });
 
+    });
+    describe("MakeOffer function's tests. ", () =>  {
+        it("An user can make an offer over a NFT that it already was listed.", async () => {
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const nftId = '1';
+            const price = ethers.utils.parseEther('1');
 
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
 
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            const priceOffer = ethers.utils.parseEther('0.1');
 
+            await marketplace.makeOffer(collectionAddress, nftId, priceOffer.toString());
+            const actualMaxOffersOfThisNFT = (await marketplace.offersOf(collectionAddress, nftId)).toString();
+            const expectedMaxOffersOfThisNFT = "1";
+            assert.equal(actualMaxOffersOfThisNFT, expectedMaxOffersOfThisNFT, "After a NFT is listed, when it receives an offer, the NFT's max number of offers should inrease in 1.");
+
+        });
     });
 
 });
