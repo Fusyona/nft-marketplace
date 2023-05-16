@@ -11,7 +11,7 @@ describe("Testing Marketplace Smart Contract", () => {
     
     let BN = BigNumber;
     const twoUp64 = BN.from(2).pow(64);
-    const _5percent = BN.from(5).mul(twoUp64).div(BN.from(100));
+    const _2percent = BN.from(2).mul(twoUp64).div(BN.from(100));
 
     beforeEach(async () => {
         await deployments.fixture(["Marketplace", "MockERC1155Collection"]); 
@@ -165,13 +165,13 @@ describe("Testing Marketplace Smart Contract", () => {
 
         });
 
-        it("After the purchase the Marketplace's ether balance should be equal to 5%NFTprice.", async () => {
+        it("After the purchase the Marketplace's ether balance should be equal to 2%NFTprice.", async () => {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
             const actualBalanceOfMarketplaceBeforeBuy = await ethers.provider.getBalance(marketplace.contractAddress);
             
-            const expectedBalanceOfMarketplace = actualBalanceOfMarketplaceBeforeBuy.add(price.mul(_5percent).div(twoUp64));
+            const expectedBalanceOfMarketplace = actualBalanceOfMarketplaceBeforeBuy.add(price.mul(_2percent).div(twoUp64));
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
             
@@ -184,22 +184,22 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
             
             const actualBalanceOfMarketplace = await ethers.provider.getBalance(marketplace.contractAddress);
-            assert.equal(actualBalanceOfMarketplace.toString(), expectedBalanceOfMarketplace.toString(), "The balance of Marketplace is not equal to 5%NFTprice.");
+            assert.equal(actualBalanceOfMarketplace.toString(), expectedBalanceOfMarketplace.toString(), "The balance of Marketplace is not equal to 2%NFTprice.");
             
         });
         
-        it("After the purchase the Seller's ether balance should increase in NFTprice - 5%NFTprice.", async ()=> {
+        it("After the purchase the Seller's ether balance should increase in NFTprice - 2%NFTprice.", async ()=> {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;            
-            const _5percentPrice = _5percent.mul(price).div(twoUp64);
+            const _2percentPrice = _2percent.mul(price).div(twoUp64);
             
             await tApprove(marketplace);
             await tList(marketplace, collectionAddress, nftId, price.toString());
             
             const balanceOfSellerAfterList = await ethers.provider.getBalance(await signer.getAddress());
-            const expectedBalanceOfSeller = balanceOfSellerAfterList.add(price.sub(_5percentPrice));
+            const expectedBalanceOfSeller = balanceOfSellerAfterList.add(price.sub(_2percentPrice));
             
             const buyer = await getAnotherSigner(1);
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
@@ -207,7 +207,7 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
             
             const actualBalanceOfSeller = await ethers.provider.getBalance(await signer.getAddress());
-            assert.equal(actualBalanceOfSeller.toString(), expectedBalanceOfSeller.toString(), "The balance of Seller is not equal to NFTprice - 5%NFTprice.");
+            assert.equal(actualBalanceOfSeller.toString(), expectedBalanceOfSeller.toString(), "The balance of Seller is not equal to NFTprice - 2%NFTprice.");
             
         });
 
