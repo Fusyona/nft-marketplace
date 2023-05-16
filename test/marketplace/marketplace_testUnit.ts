@@ -285,6 +285,32 @@ describe("Testing Marketplace Smart Contract", () => {
             expect.fail("Expected an error to be thrown");
         });
 
+        it("After unlisted a NFT is not possible make the same purchase, avoiding double spent.", async () => {
+            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+
+            const collectionAddress = mockERC1155CollectionDeployment.address;            
+            await tApprove(marketplace);
+            await tList(marketplace, collectionAddress, nftId, price.toString());
+            
+            const buyer = await getAnotherSigner(1);
+            const scammer = await getAnotherSigner(2);
+            
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            await marketplace.buy(collectionAddress, nftId);
+
+            marketplace = new Marketplace(marketplaceDeployment.address, scammer);
+            try{
+                await marketplace.buy(collectionAddress, nftId);
+            }catch(error:any){
+                expect (error.message).to.equal("NFT has not been listed yet");
+                return;
+            }
+            expect.fail("Expected an error to be thrown");
+            
+        });
+
 
 
 
