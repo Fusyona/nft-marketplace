@@ -12,7 +12,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     using ABDKMath64x64 for int128;
     using MathFees for int128;
 
-    int128 public feeRatio = MathFees._5percent();    
+    int128 public feeRatio = MathFees._2percent();    
 
     uint256 ONE_COPY = 1;
     

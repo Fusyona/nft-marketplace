@@ -25,8 +25,8 @@ function _computeFeeRatio(int128 value) internal pure returns (int128) {
     return ((value / _twoDecimalsForPercentageInput()) /int128(100));
     }
 
-function _5percent() internal pure returns(int128) {
-    return (int128(5) * int128(2**64))/ int128(100);
+function _2percent() internal pure returns(int128) {
+    return (int128(2) * int128(2**64))/ int128(100);
     }
 
 function _twoDecimalsForPercentageInput() private pure returns (int128) {
