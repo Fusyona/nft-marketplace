@@ -129,7 +129,7 @@ describe("Testing Marketplace Smart Contract", () => {
         
         });
     
-        it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exeception should be throwed.", async () => {
+        it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exception should be throwed.", async () => {
             const marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const nftId1 = "1";
@@ -224,12 +224,12 @@ describe("Testing Marketplace Smart Contract", () => {
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             const balanceOfBuyerInNFT = (await tBalanceOf(buyer.address, nftId))?.toString();
             
-            assert.equal(balanceOfBuyerInNFT, "0", "Buyer's NFT balance previusly to the purschase should be equal to 0.");
+            assert.equal(balanceOfBuyerInNFT, "0", "Buyer's NFT balance previusly to the purchase should be equal to 0.");
             
         
         });
 
-        it("Buyer's NFT balance after the purschase should increase in plus one.", async ()=> {
+        it("Buyer's NFT balance after the purchase should increase in one.", async ()=> {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
@@ -244,7 +244,7 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
             
             const balanceOfBuyerInNFT = (await tBalanceOf(buyer.address, nftId))?.toString();
-            assert.equal(balanceOfBuyerInNFT, "1", "Buyer's NFT balance previusly to the purschase should be equal to 0.");
+            assert.equal(balanceOfBuyerInNFT, "1", "Buyer's NFT balance after the purchase should increase in 1.");
             
         });
 
