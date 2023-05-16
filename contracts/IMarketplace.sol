@@ -7,9 +7,9 @@ interface IMarketplace {
     
     function buy(address collection, uint256 tokenId) external payable;
     
-    /**
     function makeOffer(address collectinn, uint256 tokenId, uint256 priceOffer) external;
     
+    /**
     function cancelOffer(address collectiom, uint256 tokenId) external;
 
     function setMinOfferPrice(uint256 value) external;
