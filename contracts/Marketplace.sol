@@ -16,7 +16,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     int128 public floorRatio = MathFees._npercent(int128(20));
 
     uint256 ONE_COPY = 1;
-    uint64 constant ONE_DAY_IN_SECONDS = 24*60*60;
+    uint64 constant ONE_DAY_IN_SECONDS = uint64(24*60*60);
     
     struct NFTForSale {
         bool listed;
@@ -74,7 +74,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     function minPriceOffer(address collectinn, uint256 nftId) public view returns(uint256) {
         NFTForSale storage nft = nftsListed[collectinn][nftId];
         uint256 currentPrice = nft.price;
-        return currentPrice - floorRatio.mulu(currentPrice);
+        return (currentPrice - floorRatio.mulu(currentPrice)); 
     }
     
 
