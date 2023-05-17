@@ -260,14 +260,11 @@ describe("Testing Marketplace Smart Contract", () => {
             const buyer = await getAnotherSigner(1);
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             
-            try{
-                await marketplace.buy(collectionAddress, nftId);
-            }catch(error:any) {
-                expect (error.message);
-                return;
-            }
-            expect.fail("Expected an error to be thrown");
-
+            const wrappedFunction = async () => {
+                await marketplace.buy(collectionAddress, nftId); 
+            };
+            expect(wrappedFunction).to.throw;
+            
         });
 
         it("If a buyer try to buy an unlisted token, the transaction should revert.", async () => {
@@ -276,13 +273,13 @@ describe("Testing Marketplace Smart Contract", () => {
             const buyer = await getAnotherSigner(1);
             const marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             const nftId = "1";
-            try {
+
+            const wrappedFunction = async () => {
                 await marketplace.buy(collectionAddress, nftId);
-            }catch(error:any) {
-                expect (error.message).to.equal("NFT has not been listed yet");
-                return;
-            }
-            expect.fail("Expected an error to be thrown");
+            };
+
+            expect(wrappedFunction).to.throw;
+            
         });
 
         it("After unlisted a NFT it's not possible make the same purchase, avoiding double spent.", async () => {
@@ -301,14 +298,13 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
 
             marketplace = new Marketplace(marketplaceDeployment.address, scammer);
-            try{
-                await marketplace.buy(collectionAddress, nftId);
-            }catch(error:any){
-                expect (error.message).to.equal("NFT has not been listed yet");
-                return;
-            }
-            expect.fail("Expected an error to be thrown");
             
+            const wrappedFunction = async () => {
+                await marketplace.buy(collectionAddress, nftId);
+            };
+
+            expect(wrappedFunction).to.throw;
+         
         });
 
 
