@@ -40,8 +40,8 @@ describe("Testing Marketplace Smart Contract", () => {
         mockERC1155CollectionDeployment = await deployments.get("MockERC1155Collection");
     }
 
-    async function tMakeOffer(marketplace: Marketplace, collectionAddress:Address, nftId:string, priceOffer:string){
-        await marketplace.makeOffer(collectionAddress, nftId, priceOffer);
+    async function tMakeOffer(marketplace: Marketplace, collectionAddress:Address, nftId:string, priceOffer:BigNumber, durationInDays: number){
+        await marketplace.makeOffer(collectionAddress, nftId, priceOffer, durationInDays);
     }
 
     async function tApprove(marketplace:Marketplace) {
@@ -330,7 +330,7 @@ describe("Testing Marketplace Smart Contract", () => {
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             const priceOffer = ethers.utils.parseEther('0.9');
             const durationInDays = 3;
-            await marketplace.makeOffer(collectionAddress, nftId, priceOffer, durationInDays);
+            await tMakeOffer(marketplace, collectionAddress, nftId, priceOffer, durationInDays);
             const actualMaxOffersOfThisNFT = (await marketplace.offersOf(collectionAddress, nftId)).toString();
             const expectedMaxOffersOfThisNFT = "1";
             assert.equal(actualMaxOffersOfThisNFT, expectedMaxOffersOfThisNFT, "After a NFT is listed, when it receives an offer, the NFT's max number of offers should inrease in 1.");
