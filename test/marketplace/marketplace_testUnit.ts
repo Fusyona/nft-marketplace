@@ -173,8 +173,8 @@ describe("Testing Marketplace Smart Contract", () => {
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
             const actualBalanceOfMarketplaceBeforeBuy = await ethers.provider.getBalance(marketplace.contractAddress);
-            
-            const expectedBalanceOfMarketplace = actualBalanceOfMarketplaceBeforeBuy.add(price.mul(_2percent).div(twoUp64));
+            const _2percentPrice = _2percent.mul(price).div(twoUp64);
+            const expectedBalanceOfMarketplace = actualBalanceOfMarketplaceBeforeBuy.add(_2percentPrice);
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
             
@@ -210,6 +210,7 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
             
             const actualBalanceOfSeller = await ethers.provider.getBalance(await signer.getAddress());
+            console.log((actualBalanceOfSeller.sub(expectedBalanceOfSeller)).toString());
             assert.equal(actualBalanceOfSeller.toString(), expectedBalanceOfSeller.toString(), "The balance of Seller is not equal to NFTprice - 2%NFTprice.");
             
         });
@@ -327,9 +328,9 @@ describe("Testing Marketplace Smart Contract", () => {
 
             const buyer = await getAnotherSigner(1);
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
-            const priceOffer = ethers.utils.parseEther('0.1');
-
-            await marketplace.makeOffer(collectionAddress, nftId, priceOffer.toString());
+            const priceOffer = ethers.utils.parseEther('0.9');
+            const durationInDays = 3;
+            await marketplace.makeOffer(collectionAddress, nftId, priceOffer, durationInDays);
             const actualMaxOffersOfThisNFT = (await marketplace.offersOf(collectionAddress, nftId)).toString();
             const expectedMaxOffersOfThisNFT = "1";
             assert.equal(actualMaxOffersOfThisNFT, expectedMaxOffersOfThisNFT, "After a NFT is listed, when it receives an offer, the NFT's max number of offers should inrease in 1.");
