@@ -64,9 +64,9 @@ class Marketplace {
         }
     }
 
-    async makeOffer(collectionAddress:Address, nftId:string, priceOffer:string): Promise<String> {
+    async makeOffer(collectionAddress:Address, nftId:string, priceOffer:BigNumber, durationInDays: number): Promise<String> {
         try{
-            const receipt = await (await this.instance()).makeOffer(collectionAddress, nftId, {value: priceOffer});
+            const receipt = await (await this.instance()).makeOffer(collectionAddress, nftId, durationInDays,{value: priceOffer});
             return this.plotUri(await receipt.wait());
         }catch(error:any) {
             throw error;
