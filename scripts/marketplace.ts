@@ -54,7 +54,7 @@ class Marketplace {
         }
     }
 
-    async getDataNFT(collectionAddress:Address, nftId1:string) {
+    async getDataNFT(collectionAddress:Address, nftId1:string): Promise<string> {
         try{
             const dataNFT = await (await this.instance()).nftsListed(collectionAddress, nftId1);
             if (dataNFT.listed === false) {
