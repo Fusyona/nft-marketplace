@@ -123,7 +123,7 @@ describe("Testing Marketplace Smart Contract", () => {
             await tList(marketplace, collectionAddress, nftId1, price.toString());
             
 
-            await expect (tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
+            expect (tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
                 'Marketplace: Error when listed'
             );  
         
@@ -135,7 +135,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const nftId1 = "1";
             const price = ethers.utils.parseEther("1");
             
-            await expect(tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
+            expect(tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
                 "ERC1155: caller is not token owner or approved"
                 );  
         });
@@ -298,16 +298,13 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
 
             marketplace = new Marketplace(marketplaceDeployment.address, scammer);
-            
             const wrappedFunction = async () => {
                 await marketplace.buy(collectionAddress, nftId);
             };
 
             expect(wrappedFunction).to.throw;
-         
+            
         });
-
-
 
 
     });
