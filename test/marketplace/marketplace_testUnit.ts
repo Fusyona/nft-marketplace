@@ -72,7 +72,7 @@ describe("Testing Marketplace Smart Contract", () => {
             console.error(error);
         }
 
-        }
+    }
 
     it("Marketplace should be deployed, therefore, it has linked an address", async () =>  {
         const zeroAddress = ethers.constants.AddressZero;
