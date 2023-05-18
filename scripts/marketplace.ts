@@ -47,10 +47,7 @@ class Marketplace {
             const receipt = await (await this.instance()).buy(collectionAddress, nftId, {value: price});
             return this.plotUri(await receipt.wait());
         }catch(error:any){
-            if (error.message === "NFT has not been listed yet"){
-                throw new Error("NFT has not been listed yet");
-            }
-            throw error.message;
+            throw error;
         }
     }
 
@@ -63,7 +60,10 @@ class Marketplace {
                 return dataNFT;
             }
         }catch(error:any){
-            throw error.messagew;
+            if ('message' in error) {
+                throw error.message;
+            }
+            throw error;
         }
     }
 

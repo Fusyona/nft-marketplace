@@ -20,6 +20,15 @@ describe("Testing Marketplace Smart Contract", () => {
         
     });
 
+    async function expectPromiseToFailWithMessage(fn:Function, messageToCatch:string) {
+        try {
+            await fn();
+        }catch(error:any) {
+            const message = "Expected promise to fail with the specified error message";
+            expect(messageToCatch, message).to.be.equal(error);
+        }
+    }
+
     async function defaultSigner() {
         const signers = await ethers.getSigners();
         signer = signers[0];
@@ -264,7 +273,6 @@ describe("Testing Marketplace Smart Contract", () => {
                 await marketplace.buy(collectionAddress, nftId); 
             };
             expect(wrappedFunction).to.throw;
-            
         });
 
         it("If a buyer try to buy an unlisted token, the transaction should revert.", async () => {
@@ -274,11 +282,13 @@ describe("Testing Marketplace Smart Contract", () => {
             const marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             const nftId = "1";
 
-            const wrappedFunction = async () => {
+
+            const wrappedBuy = async () => {
                 await marketplace.buy(collectionAddress, nftId);
             };
 
-            expect(wrappedFunction).to.throw;
+            await expectPromiseToFailWithMessage(wrappedBuy, "NFT has not been listed yet");
+            
             
         });
 
@@ -298,11 +308,11 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
 
             marketplace = new Marketplace(marketplaceDeployment.address, scammer);
-            const wrappedFunction = async () => {
+            const wrappedBuy = async () => {
                 await marketplace.buy(collectionAddress, nftId);
             };
 
-            expect(wrappedFunction).to.throw;
+            await expectPromiseToFailWithMessage(wrappedBuy, "NFT has not been listed yet");
             
         });
 
