@@ -316,6 +316,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
     });
+    
     describe("MakeOffer function's tests. ", () =>  {
         it("An user can make an offer over a NFT that it already was listed.", async () => {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
