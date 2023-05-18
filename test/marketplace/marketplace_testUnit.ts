@@ -129,7 +129,7 @@ describe("Testing Marketplace Smart Contract", () => {
         
         });
     
-        it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exception should be throwed.", async () => {
+        it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exception should be thrown.", async () => {
             const marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const nftId1 = "1";
