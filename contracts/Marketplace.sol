@@ -81,15 +81,16 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     function buy(address collection, uint256 nftId) external override payable {
         NFTForSale storage nft = nftsListed[collection][nftId];
         address buyer = msg.sender;
+        address seller =nft.seller;
         uint256 moneyReceived = msg.value;
         uint256 moneyRequired = nft.price;
         require(_purchaseRequirements(collection, nftId, moneyReceived, moneyRequired), "Marketplace: Error in the purchase.");
         delete nftsListed[collection][nftId];
         _transferRemaining(buyer, moneyReceived, moneyRequired);
-        _payingBenefits(nft.seller, moneyRequired);
+        _payingBenefits(seller, moneyRequired);
         IERC1155 ierc1155 = IERC1155(collection);
         ierc1155.safeTransferFrom(address(this), msg.sender, nftId, ONE_COPY, "");
-        emit NFTSold(msg.sender, nft.seller, collection, nftId, nft.price);
+        emit NFTSold(msg.sender, seller, collection, nftId, nft.price);
 
     } 
 
