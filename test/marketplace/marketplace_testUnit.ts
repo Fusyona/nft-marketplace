@@ -20,6 +20,15 @@ describe("Testing Marketplace Smart Contract", () => {
         
     });
 
+    async function expectPromiseToFailWithMessage(fn:Function, messageToCatch:string) {
+        try {
+            await fn();
+        }catch(error:any) {
+            const message = "Expected promise to fail with the specified error message";
+            expect(messageToCatch, message).to.be.equal(error);
+        }
+    }
+
     async function defaultSigner() {
         const signers = await ethers.getSigners();
         signer = signers[0];
@@ -67,7 +76,7 @@ describe("Testing Marketplace Smart Contract", () => {
             console.error(error);
         }
 
-        }
+    }
 
     it("Marketplace should be deployed, therefore, it has linked an address", async () =>  {
         const zeroAddress = ethers.constants.AddressZero;
@@ -127,19 +136,19 @@ describe("Testing Marketplace Smart Contract", () => {
             await tList(marketplace, collectionAddress, nftId1, price.toString());
             
 
-            await expect (tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
+            expect (tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
                 'Marketplace: Error when listed'
             );  
         
         });
     
-        it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exception should be throwed.", async () => {
+        it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exception should be thrown.", async () => {
             const marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const nftId1 = "1";
             const price = ethers.utils.parseEther("1");
             
-            await expect(tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
+            expect(tList(marketplace, collectionAddress, nftId1, price.toString())).to.be.revertedWith(
                 "ERC1155: caller is not token owner or approved"
                 );  
         });
@@ -264,14 +273,10 @@ describe("Testing Marketplace Smart Contract", () => {
             const buyer = await getAnotherSigner(1);
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             
-            try{
-                await marketplace.buy(collectionAddress, nftId);
-            }catch(error:any) {
-                expect (error.message);
-                return;
-            }
-            expect.fail("Expected an error to be thrown");
-
+            const wrappedFunction = async () => {
+                await marketplace.buy(collectionAddress, nftId); 
+            };
+            expect(wrappedFunction).to.throw;
         });
 
         it("If a buyer try to buy an unlisted token, the transaction should revert.", async () => {
@@ -280,16 +285,18 @@ describe("Testing Marketplace Smart Contract", () => {
             const buyer = await getAnotherSigner(1);
             const marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             const nftId = "1";
-            try {
+
+
+            const wrappedBuy = async () => {
                 await marketplace.buy(collectionAddress, nftId);
-            }catch(error:any) {
-                expect (error.message).to.equal("NFT has not been listed yet");
-                return;
-            }
-            expect.fail("Expected an error to be thrown");
+            };
+
+            await expectPromiseToFailWithMessage(wrappedBuy, "NFT has not been listed yet");
+            
+            
         });
 
-        it("After unlisted a NFT is not possible make the same purchase, avoiding double spent.", async () => {
+        it("After unlisted a NFT it's not possible make the same purchase, avoiding double spent.", async () => {
             let marketplace = new Marketplace(marketplaceDeployment.address, signer);
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
@@ -305,13 +312,11 @@ describe("Testing Marketplace Smart Contract", () => {
             await marketplace.buy(collectionAddress, nftId);
 
             marketplace = new Marketplace(marketplaceDeployment.address, scammer);
-            try{
+            const wrappedBuy = async () => {
                 await marketplace.buy(collectionAddress, nftId);
-            }catch(error:any){
-                expect (error.message).to.equal("NFT has not been listed yet");
-                return;
-            }
-            expect.fail("Expected an error to be thrown");
+            };
+
+            await expectPromiseToFailWithMessage(wrappedBuy, "NFT has not been listed yet");
             
         });
 

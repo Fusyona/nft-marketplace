@@ -35,7 +35,7 @@ class Marketplace {
             const nftsListed = allNFTListedEventEmitted.length;
             const nftsSold = allNFTSoldEventEmitted.length;
             if (nftsListed < nftsSold) {
-                throw new Error("Error: NFTSold is greater than NFTListed.");
+                throw new Error("NFTSold is greater than NFTListed.");
             }
             return (nftsListed-nftsSold).toString();
         }catch(error:any){
@@ -49,7 +49,7 @@ class Marketplace {
             const receipt = await (await this.instance()).list(collectionAddress, nftId, price);
             return this.plotUri(await receipt.wait());
         }catch(error:any){
-            throw error;
+            throw new Error(error.message);
         }
         
     }
@@ -91,7 +91,10 @@ class Marketplace {
                 return dataNFT;
             }
         }catch(error:any){
-            throw new Error(error.message);
+            if ('message' in error) {
+                throw error.message;
+            }
+            throw error;
         }
     }
 
