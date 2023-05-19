@@ -1,8 +1,8 @@
 
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
-import { EventFilter, Event, Contract, Signer } from "ethers";
-import { LogDescription } from "@ethersproject/abi";
+import { EventFilter, Event, Contract, Signer, BigNumber } from "ethers";
+
 
 
 
@@ -22,7 +22,7 @@ class Marketplace {
             const nftsListed = allNFTListedEventEmitted.length;
             const nftsSold = allNFTSoldEventEmitted.length;
             if (nftsListed < nftsSold) {
-                throw new Error("Error: NFTSold is greater than NFTListed.");
+                throw new Error("NFTSold is greater than NFTListed.");
             }
             return (nftsListed-nftsSold).toString();
         }catch(error:any){
@@ -36,9 +36,35 @@ class Marketplace {
             const receipt = await (await this.instance()).list(collectionAddress, nftId, price);
             return this.plotUri(await receipt.wait());
         }catch(error:any){
-            throw error;
+            throw new Error(error.message);
         }
         
+    }
+
+    async buy(collectionAddress:Address, nftId: string): Promise<String> {
+        try{
+            const [,price, ,] = await this.getDataNFT(collectionAddress, nftId);
+            const receipt = await (await this.instance()).buy(collectionAddress, nftId, {value: price});
+            return this.plotUri(await receipt.wait());
+        }catch(error:any){
+            throw error;
+        }
+    }
+
+    async getDataNFT(collectionAddress:Address, nftId1:string): Promise<string> {
+        try{
+            const dataNFT = await (await this.instance()).nftsListed(collectionAddress, nftId1);
+            if (dataNFT.listed === false) {
+                throw new Error("NFT has not been listed yet");
+            }else {
+                return dataNFT;
+            }
+        }catch(error:any){
+            if ('message' in error) {
+                throw error.message;
+            }
+            throw error;
+        }
     }
 
     private plotUri(receipt: Receipt) {
@@ -49,14 +75,9 @@ class Marketplace {
         return `https://mumbai.polygonscan.com/tx/${txHash}`;
     }
 
-    private async getEvents(eventName: string): Promise<LogDescription[]> {
+    private async getEvents(eventName: string): Promise<Event[]> {
         const marketplaceInstance: Contract = await this.instance();
-        const filter: EventFilter = {
-            address: marketplaceInstance.address,
-            topics: marketplaceInstance.filters[eventName]().topics,
-        };
-        const logs = await marketplaceInstance.provider.getLogs(filter);
-        const events = logs.map(log => marketplaceInstance.interface.parseLog(log));
+        const events = await marketplaceInstance.queryFilter(eventName);
         return events;
     }
 

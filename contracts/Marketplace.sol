@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity  ^0.8.0;
 
-import "./IMarketplace.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "./IMarketplace.sol";
+import "./ABDKMath64x64.sol";
+import "./MathFees.sol";
 
-contract Marketplace is IMarketplace, ERC1155Holder {
+contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
+    using ABDKMath64x64 for int128;
+    using MathFees for int128;
 
-    uint256 ONE_COPY = 1;    
+    int128 public feeRatio = MathFees._2percent();    
 
+    uint256 ONE_COPY = 1;
+    
     struct NFTForSale {
         bool listed;
         uint256 price;
@@ -23,6 +30,50 @@ contract Marketplace is IMarketplace, ERC1155Holder {
 
     constructor() {
         
+    }
+
+    receive() external payable{}
+
+    function setFeeRatio(int128 _percentageMultipliedBy2Up64AndTwoDecimals) external onlyOwner {
+        require(_percentageMultipliedBy2Up64AndTwoDecimals._verifyFeeRatioBounds());  
+        int128 _feeRatio = _percentageMultipliedBy2Up64AndTwoDecimals._computeFeeRatio();
+        require(feeRatio != _feeRatio, "Marketplace: You are trying to set the same feeRatio.");
+        feeRatio =_feeRatio;
+  }
+
+    function buy(address collection, uint256 nftId) external override payable {
+        NFTForSale memory nft = nftsListed[collection][nftId];
+        address buyer = msg.sender;
+        uint256 moneyReceived = msg.value;
+        uint256 moneyRequired = nft.price;
+        require(_purchaseRequirements(collection, nftId, moneyReceived, moneyRequired), "Marketplace: Error in the purchase.");
+        delete nftsListed[collection][nftId];
+        _transferRemaining(buyer, moneyReceived, moneyRequired);
+        _payingBenefits(nft.seller, moneyRequired);
+        IERC1155 ierc1155 = IERC1155(collection);
+        ierc1155.safeTransferFrom(address(this), msg.sender, nftId, ONE_COPY, "");
+        emit NFTSold(msg.sender, nft.seller, collection, nftId, nft.price);
+
+    } 
+
+    function _purchaseRequirements(address collection, uint256 nftId, uint256 moneyReceived, uint256 moneyRequired) private view returns (bool) {
+        return _isListed(collection, nftId) && (moneyReceived >= moneyRequired);
+    } 
+
+    function _transferRemaining(address user, uint256 moneyReceived, uint256 moneyRequired) private {
+    uint256 remaining = moneyReceived - moneyRequired;
+    if (remaining > 0) {
+        payable(user).transfer(remaining);
+        }
+    }
+    
+    function _payingBenefits(address seller, uint256 moneyRequired) private {
+        uint256 fusyonaFee = _fusyonaFee(moneyRequired);
+        payable(seller).transfer(moneyRequired - fusyonaFee);
+    }
+
+    function _fusyonaFee(uint256 netPayment) public view returns(uint256) {
+        return feeRatio.mulu(netPayment);
     }
 
     function list(address collection, uint256 nftId, uint256 price) public override {
@@ -44,8 +95,8 @@ contract Marketplace is IMarketplace, ERC1155Holder {
     }
 
     function _isListed(address collection, uint256 nftId) private view returns (bool) {
-        (bool listed, , ,  ) = getListing(collection, nftId);
-        return listed;
+        NFTForSale memory nftTarget = nftsListed[collection][nftId];
+        return nftTarget.listed;
     }
 
     function _isTheOwner(address seller, address collection, uint256 nftId) private view returns (bool) {
@@ -57,19 +108,5 @@ contract Marketplace is IMarketplace, ERC1155Holder {
         return price > 0;
     } 
 
-    function getListing(address collection, uint256 nftId) public view returns (
-        bool, 
-        uint256, 
-        address, 
-        address[] memory
-    ) {
-        NFTForSale storage nftForSale = nftsListed[collection][nftId];
-        return (
-            nftForSale.listed,
-            nftForSale.price,
-            nftForSale.seller,
-            nftForSale.offers
-            );
-    }
 }
 
