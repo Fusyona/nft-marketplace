@@ -1,4 +1,14 @@
 {
+
+  "name": "nft-marketplace",
+  "version": "1.0.0",
+  "description": "Fusyona NFT-Marketplace.",
+  "main": "index.js",
+  "repository": "https://github.com/Fusyona/nft-marketplace",
+  "author": "Fusyona Web3 Team",
+  "license": "",
+  "private": true,
+
   "devDependencies": {
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
@@ -15,6 +25,7 @@
     "chai": "^4.3.7",
     "hardhat": "^2.14.0",
     "hardhat-gas-reporter": "^1.0.9",
+    "prettier": "2.8.8",
     "solidity-coverage": "^0.8.2",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.1",
