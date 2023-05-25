@@ -5,8 +5,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IMarketplace} from "./IMarketplace.sol";
-import {ABDKMath64x64} from "./ABDKMath64x64.sol";
-import {MathFees} from "./MathFees.sol";
+import {ABDKMath64x64} from "./libraries/ABDKMath64x64.sol";
+import {MathFees} from "./libraries/MathFees.sol";
 
 contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     using ABDKMath64x64 for int128;
