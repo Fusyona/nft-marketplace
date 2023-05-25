@@ -595,5 +595,54 @@ describe("Testing Marketplace Smart Contract", () => {
             const expectedDifference = "1";
             expect (actualDifference, "Marketplace should keep the NFT property.").to.be.eq(expectedDifference);
         });
+
+        it("The transaction should reverts if the price offer is less than minPriceOffer", async () =>{
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+
+            await tApprove(marketplace);
+            await tList(
+                marketplace,
+                collectionAddress,
+                nftId,
+                price.toString()
+            );
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            const priceOffer = ethers.utils.parseEther("0.1");
+            const durationInDays = 3;
+            
+            await expect (tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId,
+                priceOffer,
+                durationInDays)).to.be.revertedWith("Marketplace: Error trying to make an offer.");
+        });
+
+        it("The transaction should reverts if a buyer try to make an offer over an unlisted NFT.", async () => {
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const buyer = await getAnotherSigner(1);
+            const marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                buyer
+            );
+            const nftId = "1";
+            const priceOffer = ethers.utils.parseEther("0.1");
+            const durationInDays = 3;
+
+          await expect (tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId,
+                priceOffer,
+                durationInDays)).to.be.revertedWith("Marketplace: Error trying to make an offer.");
+
+        });
     });
 });
