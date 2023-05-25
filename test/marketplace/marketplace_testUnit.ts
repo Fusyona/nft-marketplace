@@ -330,9 +330,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const actualBalanceOfSeller = await ethers.provider.getBalance(
                 await signer.getAddress()
             );
-            console.log(
-                actualBalanceOfSeller.sub(expectedBalanceOfSeller).toString()
-            );
+            
             assert.equal(
                 actualBalanceOfSeller.toString(),
                 expectedBalanceOfSeller.toString(),
@@ -521,8 +519,81 @@ describe("Testing Marketplace Smart Contract", () => {
             assert.equal(
                 actualMaxOffersOfThisNFT,
                 expectedMaxOffersOfThisNFT,
-                "After a NFT is listed, when it receives an offer, the NFT's max number of offers should inrease in 1."
+                "After a NFT is listed, when it receives an offer, the NFT's max number of offers should increase in 1."
             );
+        });
+
+        it("Balance of Marketplace should increase in price offer.", async () => {
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+
+            await tApprove(marketplace);
+            await tList(
+                marketplace,
+                collectionAddress,
+                nftId,
+                price.toString()
+            );
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            const priceOffer = ethers.utils.parseEther("0.9");
+            const durationInDays = 3;
+            const expectedBalanceOfMarketplace = (
+                await ethers.provider.getBalance(marketplace.contractAddress)
+            ).add(priceOffer);
+            await tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId,
+                priceOffer,
+                durationInDays
+            );
+            const actualBalanceOfMarketplace = await ethers.provider.getBalance(
+                marketplace.contractAddress
+            );
+            expect(
+                actualBalanceOfMarketplace.toString(),
+                "Balance of Marketplace should increase in price offer."
+            ).to.be.eq(expectedBalanceOfMarketplace.toString());
+        });
+
+        it("After a buyer make an offer, he hasn't the NFT's ownership yet.", async() =>{
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+
+            await tApprove(marketplace);
+            await tList(
+                marketplace,
+                collectionAddress,
+                nftId,
+                price.toString()
+            );
+            const buyer = await getAnotherSigner(1);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            const priceOffer = ethers.utils.parseEther("0.9");
+            const durationInDays = 3;
+            await tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId,
+                priceOffer,
+                durationInDays
+            );
+            const balanceOfBuyerAfterMakeOffer = await tBalanceOf(await buyer.getAddress(), nftId);
+            const balanceOfMarketplaceAfterMakeOffer = await tBalanceOf(marketplace.contractAddress, nftId);
+            const actualDifference = balanceOfMarketplaceAfterMakeOffer?.sub(BN.from(balanceOfBuyerAfterMakeOffer));
+            const expectedDifference = "1";
+            expect (actualDifference, "Marketplace should keep the NFT property.").to.be.eq(expectedDifference);
         });
     });
 });
