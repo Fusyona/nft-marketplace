@@ -103,7 +103,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 priceOffer
     ) private view returns (bool) {
         return
-            _isListed(collection, nftId) &&
+            isListed(collection, nftId) &&
             priceOffer >= minPriceOffer(collection, nftId);
     }
 
@@ -151,7 +151,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 moneyReceived,
         uint256 moneyRequired
     ) private view returns (bool) {
-        return _isListed(collection, nftId) && (moneyReceived >= moneyRequired);
+        return isListed(collection, nftId) && (moneyReceived >= moneyRequired);
     }
 
     function _transferRemaining(
@@ -200,15 +200,15 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 price
     ) private view returns (bool) {
         return
-            !_isListed(collection, nftId) &&
+            !isListed(collection, nftId) &&
             _isTheOwner(seller, collection, nftId) &&
             _isPriceGreaterThan0(price);
     }
 
-    function _isListed(
+    function isListed(
         address collection,
         uint256 nftId
-    ) private view returns (bool) {
+    ) public view returns (bool) {
         NFTForSale storage nftTarget = nftsListed[collection][nftId];
         return nftTarget.listed;
     }
