@@ -10,4 +10,3 @@ yarn.lock
 #OTHER FILES
 .prettierignore
 .solhintignore
-gas-report.txt
