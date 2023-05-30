@@ -25,6 +25,15 @@ class Marketplace {
         this.signer = signer;
     }
 
+    async fusyBenefitsAccumulated(): Promise<String> {
+        try{
+            return (await (await this.instance()).fusyBenefitsAccumulated()).toString();
+        }catch(error){
+            console.error(error);
+            throw error;
+        }
+    }
+
     async totalOfNFTListed(): Promise<String> {
         try {
             const allNFTListedEventEmitted = await this.getEvents("NFTListed");
