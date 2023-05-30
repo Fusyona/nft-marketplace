@@ -202,7 +202,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         return
             !isListed(collection, nftId) &&
             _isTheOwner(seller, collection, nftId) &&
-            _isPriceGreaterThan0(price);
+            (price > 0);
     }
 
     function isListed(
@@ -220,9 +220,5 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     ) private view returns (bool) {
         IERC1155 ierc1155 = IERC1155(collection);
         return ierc1155.balanceOf(seller, nftId) > 0;
-    }
-
-    function _isPriceGreaterThan0(uint256 price) private pure returns (bool) {
-        return price > 0;
     }
 }

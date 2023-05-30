@@ -106,12 +106,12 @@ class Marketplace {
 
     async getDataNFT(
         collectionAddress: Address,
-        nftId1: string
+        nftId: string
     ): Promise<NFTForSale> {
         try {
             const dataNFT: NFTForSale = await (
                 await this.instance()
-            ).nftsListed(collectionAddress, nftId1);
+            ).nftsListed(collectionAddress, nftId);
             if (dataNFT.listed === false) {
                 throw new Error("NFT has not been listed yet");
             } else {
