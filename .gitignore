@@ -6,3 +6,8 @@ node_modules
 
 #AUTOGENRATIVE FILES
 yarn.lock
+
+#OTHER FILES
+.prettierignore
+.solhintignore
+gas-report.txt

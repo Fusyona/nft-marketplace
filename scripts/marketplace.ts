@@ -1,10 +1,20 @@
-
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
 import { EventFilter, Event, Contract, Signer, BigNumber } from "ethers";
 
+interface NFTForSale {
+    listed: Boolean;
+    price: BigNumber;
+    seller: Address;
+    offers: Record<string, Offer>;
+    totalOffers: BigNumber;
+}
 
-
+interface Offer {
+    buyer: Address;
+    priceOffer: BigNumber;
+    expirationDate: number;
+}
 
 class Marketplace {
     contractAddress: Address;
@@ -16,7 +26,7 @@ class Marketplace {
     }
 
     async totalOfNFTListed(): Promise<String> {
-        try{
+        try {
             const allNFTListedEventEmitted = await this.getEvents("NFTListed");
             const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
             const nftsListed = allNFTListedEventEmitted.length;
@@ -24,43 +34,82 @@ class Marketplace {
             if (nftsListed < nftsSold) {
                 throw new Error("NFTSold is greater than NFTListed.");
             }
-            return (nftsListed-nftsSold).toString();
-        }catch(error:any){
+            return (nftsListed - nftsSold).toString();
+        } catch (error: any) {
             console.error(error.message);
             throw error;
         }
     }
 
-    async list(collectionAddress:Address, nftId:string, price:string): Promise<String> {
-        try{
-            const receipt = await (await this.instance()).list(collectionAddress, nftId, price);
+    async list(
+        collectionAddress: Address,
+        nftId: string,
+        price: string
+    ): Promise<String> {
+        try {
+            const receipt = await (
+                await this.instance()
+            ).list(collectionAddress, nftId, price);
             return this.plotUri(await receipt.wait());
-        }catch(error:any){
+        } catch (error: any) {
             throw new Error(error.message);
         }
-        
     }
 
-    async buy(collectionAddress:Address, nftId: string): Promise<String> {
-        try{
-            const [,price, ,] = await this.getDataNFT(collectionAddress, nftId);
-            const receipt = await (await this.instance()).buy(collectionAddress, nftId, {value: price});
+    async buy(collectionAddress: Address, nftId: string): Promise<String> {
+        try {
+            const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+            const receipt = await (
+                await this.instance()
+            ).buy(collectionAddress, nftId, { value: dataNFT.price });
             return this.plotUri(await receipt.wait());
-        }catch(error:any){
+        } catch (error: any) {
             throw error;
         }
     }
 
-    async getDataNFT(collectionAddress:Address, nftId1:string): Promise<string> {
-        try{
-            const dataNFT = await (await this.instance()).nftsListed(collectionAddress, nftId1);
+    async makeOffer(
+        collectionAddress: Address,
+        nftId: string,
+        priceOffer: BigNumber,
+        durationInDays: number
+    ): Promise<String> {
+        try {
+            const receipt = await (
+                await this.instance()
+            ).makeOffer(collectionAddress, nftId, durationInDays, {
+                value: priceOffer,
+            });
+            return this.plotUri(await receipt.wait());
+        } catch (error: any) {
+            throw error;
+        }
+    }
+
+    async offersOf(collectionAddress: Address, nftId: string): Promise<String> {
+        try {
+            const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+            return dataNFT.totalOffers.toString();
+        } catch (error: any) {
+            throw error;
+        }
+    }
+
+    async getDataNFT(
+        collectionAddress: Address,
+        nftId: string
+    ): Promise<NFTForSale> {
+        try {
+            const dataNFT: NFTForSale = await (
+                await this.instance()
+            ).nftsListed(collectionAddress, nftId);
             if (dataNFT.listed === false) {
                 throw new Error("NFT has not been listed yet");
-            }else {
+            } else {
                 return dataNFT;
             }
-        }catch(error:any){
-            if ('message' in error) {
+        } catch (error: any) {
+            if ("message" in error) {
                 throw error.message;
             }
             throw error;
@@ -71,7 +120,7 @@ class Marketplace {
         return this.uriScanner(receipt.transactionHash);
     }
 
-    uriScanner(txHash:string) {
+    uriScanner(txHash: string) {
         return `https://mumbai.polygonscan.com/tx/${txHash}`;
     }
 
@@ -83,13 +132,16 @@ class Marketplace {
 
     private async instance(): Promise<Contract> {
         try {
-            const instanceRetrieved = await ethers.getContractAt("Marketplace", this.contractAddress, this.signer);
+            const instanceRetrieved = await ethers.getContractAt(
+                "Marketplace",
+                this.contractAddress,
+                this.signer
+            );
             return instanceRetrieved;
-        }catch(error:any){
+        } catch (error: any) {
             throw error;
         }
     }
 }
 
-export {Marketplace}
-
+export { Marketplace };
