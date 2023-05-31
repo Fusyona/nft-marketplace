@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
-import { EventFilter, Event, Contract, Signer, BigNumber } from "ethers";
+import { Event, Contract, Signer, BigNumber } from "ethers";
 
 interface NFTForSale {
     listed: Boolean;
@@ -25,16 +25,15 @@ class Marketplace {
         this.signer = signer;
     }
 
-    async fusyBenefitsAccumulated(): Promise<String> {
+    async fusyBenefitsAccumulated(): Promise<BigNumber> {
         try{
-            return (await (await this.instance()).fusyBenefitsAccumulated()).toString();
+            return (await (await this.instance()).fusyBenefitsAccumulated());
         }catch(error){
-            console.error(error);
             throw error;
         }
     }
 
-    async totalOfNFTListed(): Promise<String> {
+    async totalOfNFTListed(): Promise<number> {
         try {
             const allNFTListedEventEmitted = await this.getEvents("NFTListed");
             const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
@@ -43,9 +42,18 @@ class Marketplace {
             if (nftsListed < nftsSold) {
                 throw new Error("NFTSold is greater than NFTListed.");
             }
-            return (nftsListed - nftsSold).toString();
+            return (nftsListed - nftsSold);
         } catch (error: any) {
             console.error(error.message);
+            throw error;
+        }
+    }
+
+    async withdraw():Promise<string> {
+        try {
+            const receipt =  await (await this.instance()).withdraw();
+            return this.plotUri(await receipt.wait());
+        }catch(error){
             throw error;
         }
     }
@@ -95,10 +103,10 @@ class Marketplace {
         }
     }
 
-    async offersOf(collectionAddress: Address, nftId: string): Promise<String> {
+    async offersOf(collectionAddress: Address, nftId: string): Promise<BigNumber> {
         try {
             const dataNFT = await this.getDataNFT(collectionAddress, nftId);
-            return dataNFT.totalOffers.toString();
+            return dataNFT.totalOffers;
         } catch (error: any) {
             throw error;
         }
