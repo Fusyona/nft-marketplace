@@ -26,9 +26,9 @@ class Marketplace {
     }
 
     async fusyBenefitsAccumulated(): Promise<BigNumber> {
-        try{
-            return (await (await this.instance()).fusyBenefitsAccumulated());
-        }catch(error){
+        try {
+            return await (await this.instance()).fusyBenefitsAccumulated();
+        } catch (error) {
             throw error;
         }
     }
@@ -42,18 +42,18 @@ class Marketplace {
             if (nftsListed < nftsSold) {
                 throw new Error("NFTSold is greater than NFTListed.");
             }
-            return (nftsListed - nftsSold);
+            return nftsListed - nftsSold;
         } catch (error: any) {
             console.error(error.message);
             throw error;
         }
     }
 
-    async withdraw():Promise<string> {
+    async withdraw(): Promise<string> {
         try {
-            const receipt =  await (await this.instance()).withdraw();
+            const receipt = await (await this.instance()).withdraw();
             return this.plotUri(await receipt.wait());
-        }catch(error){
+        } catch (error) {
             throw error;
         }
     }
@@ -103,7 +103,10 @@ class Marketplace {
         }
     }
 
-    async offersOf(collectionAddress: Address, nftId: string): Promise<BigNumber> {
+    async offersOf(
+        collectionAddress: Address,
+        nftId: string
+    ): Promise<BigNumber> {
         try {
             const dataNFT = await this.getDataNFT(collectionAddress, nftId);
             return dataNFT.totalOffers;

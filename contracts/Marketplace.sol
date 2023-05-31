@@ -62,7 +62,10 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     receive() external payable {}
 
     function withdraw() external onlyOwner {
-        require(fusyBenefitsAccumulated > 0, "Marketplace: Nothing to withdraw.");
+        require(
+            fusyBenefitsAccumulated > 0,
+            "Marketplace: Nothing to withdraw."
+        );
         uint256 amountToWithdraw = fusyBenefitsAccumulated;
         fusyBenefitsAccumulated = 0;
         payable(owner()).transfer(amountToWithdraw);

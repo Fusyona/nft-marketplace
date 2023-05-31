@@ -69,32 +69,31 @@ describe("Testing Marketplace Smart Contract", () => {
         );
     }
 
-    async function tApprove(marketplace: Marketplace, signer?:Signer) {
+    async function tApprove(marketplace: Marketplace, signer?: Signer) {
         try {
-           await (await mockCollection(signer)).setApprovalForAll(
-                marketplace.contractAddress,
-                true
-            );
+            await (
+                await mockCollection(signer)
+            ).setApprovalForAll(marketplace.contractAddress, true);
         } catch (error) {
             throw error;
         }
     }
 
-    async function  tSafeTransferFrom(signer:Signer, to:string, nftid:string) {
-        try{
-           await (await mockCollection(signer)).safeTransferFrom(
-            await signer.getAddress(),
-            to,
-            nftid,
-            '1',
-            []
-           );
-        }catch(error){
+    async function tSafeTransferFrom(
+        signer: Signer,
+        to: string,
+        nftid: string
+    ) {
+        try {
+            await (
+                await mockCollection(signer)
+            ).safeTransferFrom(await signer.getAddress(), to, nftid, "1", []);
+        } catch (error) {
             throw error;
         }
     }
 
-    async function mockCollection(signer?:Signer): Promise<ERC1155>{
+    async function mockCollection(signer?: Signer): Promise<ERC1155> {
         try {
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const mockCollection = await ethers.getContractAt(
@@ -103,7 +102,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 signer
             );
             return mockCollection;
-        }catch(error) {
+        } catch (error) {
             throw error;
         }
     }
@@ -350,7 +349,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const actualBalanceOfSeller = await ethers.provider.getBalance(
                 await signer.getAddress()
             );
-            
+
             assert.equal(
                 actualBalanceOfSeller.toString(),
                 expectedBalanceOfSeller.toString(),
@@ -582,7 +581,7 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.eq(expectedBalanceOfMarketplace.toString());
         });
 
-        it("After a buyer make an offer, he hasn't the NFT's ownership yet.", async() =>{
+        it("After a buyer make an offer, he hasn't the NFT's ownership yet.", async () => {
             let marketplace = new Marketplace(
                 marketplaceDeployment.address,
                 signer
@@ -609,14 +608,25 @@ describe("Testing Marketplace Smart Contract", () => {
                 priceOffer,
                 durationInDays
             );
-            const balanceOfBuyerAfterMakeOffer = await tBalanceOf(await buyer.getAddress(), nftId);
-            const balanceOfMarketplaceAfterMakeOffer = await tBalanceOf(marketplace.contractAddress, nftId);
-            const actualDifference = balanceOfMarketplaceAfterMakeOffer?.sub(BN.from(balanceOfBuyerAfterMakeOffer));
+            const balanceOfBuyerAfterMakeOffer = await tBalanceOf(
+                await buyer.getAddress(),
+                nftId
+            );
+            const balanceOfMarketplaceAfterMakeOffer = await tBalanceOf(
+                marketplace.contractAddress,
+                nftId
+            );
+            const actualDifference = balanceOfMarketplaceAfterMakeOffer?.sub(
+                BN.from(balanceOfBuyerAfterMakeOffer)
+            );
             const expectedDifference = "1";
-            expect (actualDifference, "Marketplace should keep the NFT property.").to.be.eq(expectedDifference);
+            expect(
+                actualDifference,
+                "Marketplace should keep the NFT property."
+            ).to.be.eq(expectedDifference);
         });
 
-        it("The transaction should reverts if the price offer is less than minPriceOffer", async () =>{
+        it("The transaction should reverts if the price offer is less than minPriceOffer", async () => {
             let marketplace = new Marketplace(
                 marketplaceDeployment.address,
                 signer
@@ -636,13 +646,16 @@ describe("Testing Marketplace Smart Contract", () => {
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             const priceOffer = ethers.utils.parseEther("0.1");
             const durationInDays = 3;
-            
-            await expect (tMakeOffer(
-                marketplace,
-                collectionAddress,
-                nftId,
-                priceOffer,
-                durationInDays)).to.be.revertedWith("Marketplace: Error trying to make an offer.");
+
+            await expect(
+                tMakeOffer(
+                    marketplace,
+                    collectionAddress,
+                    nftId,
+                    priceOffer,
+                    durationInDays
+                )
+            ).to.be.revertedWith("Marketplace: Error trying to make an offer.");
         });
 
         it("The transaction should reverts if a buyer try to make an offer over an unlisted NFT.", async () => {
@@ -656,32 +669,35 @@ describe("Testing Marketplace Smart Contract", () => {
             const priceOffer = ethers.utils.parseEther("0.9");
             const durationInDays = 3;
 
-          await expect (tMakeOffer(
-                marketplace,
-                collectionAddress,
-                nftId,
-                priceOffer,
-                durationInDays)).to.be.revertedWith("Marketplace: Error trying to make an offer.");
-
+            await expect(
+                tMakeOffer(
+                    marketplace,
+                    collectionAddress,
+                    nftId,
+                    priceOffer,
+                    durationInDays
+                )
+            ).to.be.revertedWith("Marketplace: Error trying to make an offer.");
         });
     });
 
-    describe ("Escrow functions's tests", () => {
-
+    describe("Escrow functions's tests", () => {
         it("Whether there's not sales, the fusyBenefitsAccumulated should be equal to 0.", async () => {
             const seller = await getAnotherSigner(1);
             const buyer = await getAnotherSigner(2);
             const nftId = "1";
 
             await tSafeTransferFrom(signer, seller.address, nftId);
-         
-            let marketplace = new Marketplace(marketplaceDeployment.address, seller);
+
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const price = ethers.utils.parseEther("1");
-        
-            
+
             await tApprove(marketplace, seller);
-            
+
             await tList(
                 marketplace,
                 collectionAddress,
@@ -697,11 +713,15 @@ describe("Testing Marketplace Smart Contract", () => {
                 collectionAddress,
                 nftId,
                 priceOffer,
-                durationInDays);
-                
-            const expectedFusyBenefitsAcc = '0';
-            const actualFusyBenefitsAcc = await marketplace.fusyBenefitsAccumulated();
-            expect (actualFusyBenefitsAcc.toString()).to.be.eq(expectedFusyBenefitsAcc);
+                durationInDays
+            );
+
+            const expectedFusyBenefitsAcc = "0";
+            const actualFusyBenefitsAcc =
+                await marketplace.fusyBenefitsAccumulated();
+            expect(actualFusyBenefitsAcc.toString()).to.be.eq(
+                expectedFusyBenefitsAcc
+            );
         });
         it("The withdraw transaction should revert if the balance of Marketplace is greater than 0 and the fusyBenefitsAccumulated is 0.", async () => {
             const seller = await getAnotherSigner(1);
@@ -710,9 +730,12 @@ describe("Testing Marketplace Smart Contract", () => {
 
             await tSafeTransferFrom(signer, await seller.getAddress(), nftId);
 
-            let marketplace = new Marketplace(marketplaceDeployment.address, seller);
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            
+
             const price = ethers.utils.parseEther("1");
 
             await tApprove(marketplace, seller);
@@ -731,31 +754,47 @@ describe("Testing Marketplace Smart Contract", () => {
                 collectionAddress,
                 nftId,
                 priceOffer,
-                durationInDays);
-            
-            marketplace = new Marketplace(marketplaceDeployment.address, signer);
-            const balanceOfMarketPlace = await ethers.provider.getBalance(marketplaceDeployment.address);
-            const fusyBenefitsAccumulated = await marketplace.fusyBenefitsAccumulated();
+                durationInDays
+            );
+
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            const balanceOfMarketPlace = await ethers.provider.getBalance(
+                marketplaceDeployment.address
+            );
+            const fusyBenefitsAccumulated =
+                await marketplace.fusyBenefitsAccumulated();
             await expect(balanceOfMarketPlace).to.be.greaterThan(BN.from(0));
             await expect(fusyBenefitsAccumulated).to.be.eq(BN.from(0));
-            await expect (marketplace.withdraw()).to.be.revertedWith("Marketplace: Nothing to withdraw.");
-            
+            await expect(marketplace.withdraw()).to.be.revertedWith(
+                "Marketplace: Nothing to withdraw."
+            );
         });
         it("Whether someone different to Marketplace's owner try to withdraw, then the transaction should revert.", async () => {
             const seller = await getAnotherSigner(1);
-            let marketplace = new Marketplace(marketplaceDeployment.address, seller);
-            
-            await expect(marketplace.withdraw()).to.be.revertedWith("Ownable: caller is not the owner");
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
+
+            await expect(marketplace.withdraw()).to.be.revertedWith(
+                "Ownable: caller is not the owner"
+            );
         });
         it("After trade an NFT should be possible for the Marketplace's owner withdraw the fusyBenefitsAccumulated.", async () => {
             const seller = await getAnotherSigner(1);
             const buyer = await getAnotherSigner(2);
             const nftId = "1";
             await tSafeTransferFrom(signer, seller.address, nftId);
-            
-            let marketplace = new Marketplace(marketplaceDeployment.address, seller);
+
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
             const collectionAddress = mockERC1155CollectionDeployment.address;
-           
+
             const price = ethers.utils.parseEther("1");
 
             await tApprove(marketplace, seller);
@@ -767,32 +806,41 @@ describe("Testing Marketplace Smart Contract", () => {
             );
 
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
-            const actualBalanceOfMarketplaceBeforeBuy = await ethers.provider.getBalance(marketplace.contractAddress);
+            const actualBalanceOfMarketplaceBeforeBuy =
+                await ethers.provider.getBalance(marketplace.contractAddress);
             const _2percentPrice = _2percent.mul(price).div(twoUp64);
             const expectedBalanceOfMarketplace =
                 actualBalanceOfMarketplaceBeforeBuy.add(_2percentPrice);
-            
+
             await marketplace.buy(collectionAddress, nftId);
             const actualBalanceOfMarketplace = await ethers.provider.getBalance(
                 marketplace.contractAddress
             );
-            const actualFusyBenefitsAcc = await marketplace.fusyBenefitsAccumulated();
-            expect (actualBalanceOfMarketplace).to.be.eq(expectedBalanceOfMarketplace);
-            expect (actualFusyBenefitsAcc).to.be.eq(expectedBalanceOfMarketplace);
-            await expect(marketplace.withdraw()).to.be.ok; 
+            const actualFusyBenefitsAcc =
+                await marketplace.fusyBenefitsAccumulated();
+            expect(actualBalanceOfMarketplace).to.be.eq(
+                expectedBalanceOfMarketplace
+            );
+            expect(actualFusyBenefitsAcc).to.be.eq(
+                expectedBalanceOfMarketplace
+            );
+            await expect(marketplace.withdraw()).to.be.ok;
         });
         it("If there're various NFT listed and one of them is sold and another one has an offer, the fusyBenefitsAccumulated does not into account the percent by offer made one.", async () => {
             const seller1 = await getAnotherSigner(1);
             const seller2 = await getAnotherSigner(3);
             const buyer1 = await getAnotherSigner(2);
             const buyer2 = await getAnotherSigner(4);
-            const nftIds = ["1","2"];
-            
+            const nftIds = ["1", "2"];
+
             await tSafeTransferFrom(signer, seller1.address, nftIds[0]);
             await tSafeTransferFrom(signer, seller2.address, nftIds[1]);
 
             const price = ethers.utils.parseEther("1");
-            let marketplace = new Marketplace(marketplaceDeployment.address, seller1);
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller1
+            );
             const collectionAddress = mockERC1155CollectionDeployment.address;
             await tApprove(marketplace, seller1);
             await tList(
@@ -801,7 +849,10 @@ describe("Testing Marketplace Smart Contract", () => {
                 nftIds[0],
                 price.toString()
             );
-            marketplace = new Marketplace(marketplaceDeployment.address, seller2);
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller2
+            );
             await tApprove(marketplace, seller2);
             await tList(
                 marketplace,
@@ -809,11 +860,18 @@ describe("Testing Marketplace Smart Contract", () => {
                 nftIds[1],
                 price.toString()
             );
-            marketplace = new Marketplace(marketplaceDeployment.address, buyer1);
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                buyer1
+            );
             await marketplace.buy(collectionAddress, nftIds[0]);
-            const expectedFusyBenefitsAcc = await marketplace.fusyBenefitsAccumulated();
-            
-            marketplace = new Marketplace(marketplaceDeployment.address, buyer2);
+            const expectedFusyBenefitsAcc =
+                await marketplace.fusyBenefitsAccumulated();
+
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                buyer2
+            );
             const priceOffer = ethers.utils.parseEther("0.9");
             const durationInDays = 3;
             await tMakeOffer(
@@ -821,18 +879,25 @@ describe("Testing Marketplace Smart Contract", () => {
                 collectionAddress,
                 nftIds[1],
                 priceOffer,
-                durationInDays);
+                durationInDays
+            );
 
-            const actualFusyBenefitsAcc = await marketplace.fusyBenefitsAccumulated();
-            
-            expect(actualFusyBenefitsAcc, "Balance is not equal to the expected value.").to.be.eq(expectedFusyBenefitsAcc);
+            const actualFusyBenefitsAcc =
+                await marketplace.fusyBenefitsAccumulated();
+
+            expect(
+                actualFusyBenefitsAcc,
+                "Balance is not equal to the expected value."
+            ).to.be.eq(expectedFusyBenefitsAcc);
         });
 
-
         it("After withdraw the fusyBenefitsAccumulated, it should down to 0 value.", async () => {
-            let marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
             const nftId = "1";
-            const price = ethers.utils.parseEther("1");     
+            const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             await tApprove(marketplace);
             await tList(
@@ -844,12 +909,18 @@ describe("Testing Marketplace Smart Contract", () => {
             const buyer = await getAnotherSigner(1);
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
             await marketplace.buy(collectionAddress, nftId);
-            marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
             await marketplace.withdraw();
             const expectedFusyBenefitsAcc = "0";
-            const actualFusyBenefitsAcc = await marketplace.fusyBenefitsAccumulated();
-            expect (actualFusyBenefitsAcc.toString(), "The fusyBenefitsAccumulated didn't down to 0 value.").to.be.eq(expectedFusyBenefitsAcc); 
-
+            const actualFusyBenefitsAcc =
+                await marketplace.fusyBenefitsAccumulated();
+            expect(
+                actualFusyBenefitsAcc.toString(),
+                "The fusyBenefitsAccumulated didn't down to 0 value."
+            ).to.be.eq(expectedFusyBenefitsAcc);
         });
     });
 });

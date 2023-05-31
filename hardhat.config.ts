@@ -19,7 +19,8 @@ const config: HardhatUserConfig = {
         noColors: true,
         coinmarketcap: "2ddf7536-429c-4bc3-8558-e4cb64d63b58",
         token: "MATIC",
-        gasPriceApi: "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice"
+        gasPriceApi:
+            "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
     },
 };
 
