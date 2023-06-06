@@ -3,9 +3,7 @@ import { assert, expect } from "chai";
 import { Marketplace } from "../../scripts/marketplace";
 import { Contract, Signer, BigNumber } from "ethers";
 import { Address, Deployment } from "hardhat-deploy/types";
-import { string } from "hardhat/internal/core/params/argumentTypes";
 import { ERC1155 } from "../../typechain-types";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("Testing Marketplace Smart Contract", () => {
     let signer: Signer;
