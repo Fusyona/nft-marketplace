@@ -4,6 +4,7 @@ import { Marketplace } from "../../scripts/marketplace";
 import { Contract, Signer, BigNumber } from "ethers";
 import { Address, Deployment } from "hardhat-deploy/types";
 import { ERC1155 } from "../../typechain-types";
+import {time} from "@nomicfoundation/hardhat-network-helpers";
 
 describe("Testing Marketplace Smart Contract", () => {
     let signer: Signer;
@@ -871,6 +872,49 @@ describe("Testing Marketplace Smart Contract", () => {
                 actualFusyBenefitsAcc.toString(),
                 "The fusyBenefitsAccumulated didn't down to 0 value."
             ).to.be.eq(expectedFusyBenefitsAcc);
+        });
+    });
+    describe("takeOffer function's tests", () => {
+        it("Whether the offer's expiration date is reached the transaction should revert.", async ()=>{
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+
+            await approveAndListingByASeller(
+                signer,
+                collectionAddress,
+                nftId,
+                price
+            );
+            
+            const buyer = await getAnotherSigner(1);
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                buyer
+            );
+
+            const priceOffer = ethers.utils.parseEther("0.9");
+            const durationInDays = 3;
+            await tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId,
+                priceOffer,
+                durationInDays
+            );
+            
+            const daysPassed = 4;
+
+
+
+            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith(
+                "The offer expired.");
+            
+        });
+
+        
+        it("A seller can accept an offer if its expiration date is not reached yet.", async ()=>{
+
         });
     });
 });
