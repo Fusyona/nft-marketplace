@@ -5,7 +5,7 @@ typechain-types
 node_modules
 
 #AUTOGENRATIVE FILES
-
+yarn-error.log
 #OTHER FILES
 .prettierignore
 .solhintignore
