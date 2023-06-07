@@ -6,6 +6,7 @@ node_modules
 
 #AUTOGENRATIVE FILES
 yarn-error.log
+yarn.lock
 #OTHER FILES
 .prettierignore
 .solhintignore
