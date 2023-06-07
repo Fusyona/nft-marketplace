@@ -904,7 +904,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             
             const daysPassed = 4;
-
+            
 
 
             await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith(
