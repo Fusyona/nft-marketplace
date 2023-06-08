@@ -880,13 +880,27 @@ describe("Testing Marketplace Smart Contract", () => {
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
 
+            await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);  
+            const daysPassed = 4;
+            const ONE_DAY_IN_SECONDS = 24 * 60 *60; 
+            const daysPassedInSecondsInUnixTime = Math.floor(Date.now() / 1000) + daysPassed * ONE_DAY_IN_SECONDS;
+            time.increase(daysPassedInSecondsInUnixTime);
+            const marketplace = new Marketplace(marketplaceDeployment.address,signer);
+            const indexOfOfferMapping = 0;
+            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith(
+                "The offer expired.");
+            
+        });
+
+        async function presetRequirementsForThreeExpirationDays(collectionAddress:Address, nftId:string, price:BigNumber){
+       
             await approveAndListingByASeller(
                 signer,
                 collectionAddress,
                 nftId,
                 price
             );
-            
+
             const buyer = await getAnotherSigner(1);
             let marketplace = new Marketplace(
                 marketplaceDeployment.address,
@@ -902,19 +916,25 @@ describe("Testing Marketplace Smart Contract", () => {
                 priceOffer,
                 durationInDays
             );
-            
-            const daysPassed = 4;
-            
+        };
 
+        it("A seller can accept an offer if its expiration date is not reached yet.", async ()=> {
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
 
-            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith(
-                "The offer expired.");
-            
+            await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);  
+            const daysPassed = 2;
+            const ONE_DAY_IN_SECONDS = 24 * 60 *60; 
+            const daysPassedInSecondsInUnixTime = Math.floor(Date.now() / 1000) + daysPassed * ONE_DAY_IN_SECONDS;
+            time.increase(daysPassedInSecondsInUnixTime);
+            const marketplace = new Marketplace(marketplaceDeployment.address,signer);
+            const indexOfOfferMapping = 0;
+            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.ok;            
         });
 
-        
-        it("A seller can accept an offer if its expiration date is not reached yet.", async ()=>{
-
+        it("When you take an offer the NFT's totalOffers should decrease in one.", async () => {
+            
         });
     });
 });
