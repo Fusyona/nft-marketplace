@@ -32,6 +32,8 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     uint256 internal constant ONE_COPY = 1;
     uint64 internal constant ONE_DAY_IN_SECONDS = uint64(24 * 60 * 60);
 
+    uint256 public fusyBenefitsAccumulated;
+
     mapping(address => mapping(uint256 => NFTForSale)) public nftsListed;
 
     event NFTListed(
@@ -53,10 +55,22 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 indexed nftId,
         uint256 priceOffer
     );
+    event RootWithdrawal(address indexed beneficiary, uint256 amount);
 
     constructor() {}
 
     receive() external payable {}
+
+    function withdraw() external onlyOwner {
+        require(
+            fusyBenefitsAccumulated > 0,
+            "Marketplace: Nothing to withdraw."
+        );
+        uint256 amountToWithdraw = fusyBenefitsAccumulated;
+        fusyBenefitsAccumulated = 0;
+        payable(owner()).transfer(amountToWithdraw);
+        emit RootWithdrawal(owner(), amountToWithdraw);
+    }
 
     function setFeeRatio(
         int128 _percentageMultipliedBy2Up64AndTwoDecimals
@@ -167,6 +181,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
 
     function _payingBenefits(address seller, uint256 moneyRequired) private {
         uint256 fusyonaFee = _fusyonaFee(moneyRequired);
+        fusyBenefitsAccumulated += fusyonaFee;
         payable(seller).transfer(moneyRequired - fusyonaFee);
     }
 
