@@ -49,10 +49,10 @@ class Marketplace {
         }
     }
 
-    async withdraw(): Promise<string> {
+    async withdraw(): Promise<Receipt> {
         try {
             const receipt = await (await this.instance()).withdraw();
-            return this.plotUri(await receipt.wait());
+            return (await receipt.wait());
         } catch (error) {
             throw error;
         }
@@ -62,12 +62,12 @@ class Marketplace {
         collectionAddress: Address,
         nftId: string,
         price: string
-    ): Promise<String> {
+    ): Promise<Receipt> {
         try {
             const receipt = await (
                 await this.instance()
             ).list(collectionAddress, nftId, price);
-            return this.plotUri(await receipt.wait());
+            return (await receipt.wait());
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -79,7 +79,7 @@ class Marketplace {
             const receipt = await (
                 await this.instance()
             ).buy(collectionAddress, nftId, { value: dataNFT.price });
-            return this.plotUri(await receipt.wait());
+            return (await receipt.wait());
         } catch (error: any) {
             throw error;
         }
@@ -90,14 +90,14 @@ class Marketplace {
         nftId: string,
         priceOffer: BigNumber,
         durationInDays: number
-    ): Promise<String> {
+    ): Promise<Receipt> {
         try {
             const receipt = await (
                 await this.instance()
             ).makeOffer(collectionAddress, nftId, durationInDays, {
                 value: priceOffer,
             });
-            return this.plotUri(await receipt.wait());
+            return (await receipt.wait());
         } catch (error: any) {
             throw error;
         }
@@ -136,7 +136,7 @@ class Marketplace {
         }
     }
 
-    private plotUri(receipt: Receipt) {
+    plotUri(receipt: Receipt) {
         return this.uriScanner(receipt.transactionHash);
     }
 
