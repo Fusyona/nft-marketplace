@@ -762,7 +762,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
 
             const buyer = await getAnotherSigner(2);
-            const marketplace = new Marketplace(
+            let marketplace = new Marketplace(
                 marketplaceDeployment.address,
                 buyer
             );
@@ -784,7 +784,8 @@ describe("Testing Marketplace Smart Contract", () => {
             expect(actualFusyBenefitsAcc).to.be.eq(
                 expectedBalanceOfMarketplace
             );
-            await expect(marketplace.withdraw()).to.be.ok;
+            marketplace = new Marketplace(marketplaceDeployment.address,signer);
+            await expect(marketplace.withdraw()).to.be.not.reverted;
         });
 
         it("If there're various NFT listed and one of them is sold and another one has an offer, the fusyBenefitsAccumulated does not take into account the percent by offer made one.", async () => {
