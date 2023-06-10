@@ -1,9 +1,10 @@
 import { deployments, ethers } from "hardhat";
 import { assert, expect } from "chai";
 import { Marketplace } from "../../scripts/marketplace";
-import { Contract, Signer, BigNumber } from "ethers";
+import { Signer, BigNumber } from "ethers";
 import { Address, Deployment } from "hardhat-deploy/types";
 import { ERC1155 } from "../../typechain-types";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("Testing Marketplace Smart Contract", () => {
     let signer: Signer;
@@ -95,7 +96,7 @@ describe("Testing Marketplace Smart Contract", () => {
     async function mockCollection(signer?: Signer): Promise<ERC1155> {
         try {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const mockCollection = await ethers.getContractAt(
+            const mockCollection: ERC1155 = await ethers.getContractAt(
                 "ERC1155",
                 collectionAddress,
                 signer
@@ -695,8 +696,9 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             const fusyBenefitsAccumulated =
                 await marketplace.fusyBenefitsAccumulated();
-            await expect(balanceOfMarketPlace).to.be.greaterThan(BN.from(0));
-            await expect(fusyBenefitsAccumulated).to.be.eq(BN.from(0));
+
+            expect(balanceOfMarketPlace.gte(BN.from(0))).to.be.true;
+            expect(fusyBenefitsAccumulated).to.be.eq(BN.from(0));
             await expect(marketplace.withdraw()).to.be.revertedWith(
                 "Marketplace: Nothing to withdraw."
             );
@@ -784,7 +786,7 @@ describe("Testing Marketplace Smart Contract", () => {
             expect(actualFusyBenefitsAcc).to.be.eq(
                 expectedBalanceOfMarketplace
             );
-            await expect(marketplace.withdraw()).to.be.ok;
+            await expect(marketplace.withdraw()).to.be.not.reverted;
         });
 
         it("If there're various NFT listed and one of them is sold and another one has an offer, the fusyBenefitsAccumulated does not take into account the percent by offer made one.", async () => {
@@ -873,4 +875,312 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.eq(expectedFusyBenefitsAcc);
         });
     });
+
+    describe("MakeCounteroffer function tests", () => {
+        let seller: SignerWithAddress;
+        let marketplace: Marketplace;
+        const nftPrice = BN.from(100);
+        const counterofferPrice = 91;
+        let collectionAddress: Address;
+
+        beforeEach(async () => {
+            seller = await getAnotherSigner(1);
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
+            collectionAddress = mockERC1155CollectionDeployment.address;
+        });
+
+        it("should revert if no NFT is listed from a collection", async () => {
+            const notListedCollectionAddress = seller.address;
+
+            await expect(
+                marketplace.makeCounteroffer(notListedCollectionAddress)
+            ).to.be.revertedWith("Marketplace: NFT not listed");
+        });
+
+        it("should revert if the NFT ID is not listed for a collection with a previously listed NFT", async () => {
+            const listedNftId = 1;
+
+            await setupAndMakeOffer(collectionAddress, listedNftId);
+
+            const unlistedNftId = 2;
+
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    unlistedNftId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith("Marketplace: NFT not listed");
+        });
+
+        async function setupAndMakeOffer(
+            collectionAddress: string,
+            nftId: BigNumber | number,
+            offerPrice: BigNumber | number = 90,
+            durationInDays = 3
+        ) {
+            const nftIdStr = nftId.toString();
+            await tSafeTransferFrom(signer, seller.address, nftIdStr);
+            await approveAndListingByASeller(
+                seller,
+                collectionAddress,
+                nftIdStr,
+                nftPrice
+            );
+            await marketplace.makeOffer(
+                collectionAddress,
+                nftIdStr,
+                offerPrice,
+                durationInDays
+            );
+            const offerId = 0;
+            return offerId;
+        }
+
+        it("should revert if the offer doesn't exist when the NFT does it", async () => {
+            const nftId = 1;
+
+            await setupAndMakeOffer(collectionAddress, nftId);
+
+            const unexistingOfferId = 1;
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    BN.from(nftId),
+                    unexistingOfferId
+                )
+            ).to.be.revertedWith("Marketplace: Offer not found");
+        });
+
+        it("should revert if the price is lower than the offer price", async () => {
+            const nftId = 1;
+            const offerPrice = 90;
+
+            const offerId = await setupAndMakeOffer(
+                collectionAddress,
+                nftId,
+                offerPrice
+            );
+
+            const counterofferPrice = offerPrice - 1;
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    BN.from(nftId),
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith(
+                "Marketplace: Price must be greater than offer"
+            );
+        });
+
+        it("should revert if the price is equal to the offer price", async () => {
+            const nftId = 1;
+            const offerPrice = 90;
+
+            const offerId = await setupAndMakeOffer(
+                collectionAddress,
+                nftId,
+                offerPrice
+            );
+
+            const counterofferPrice = offerPrice;
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    BN.from(nftId),
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith(
+                "Marketplace: Price must be greater than offer"
+            );
+        });
+
+        it("should revert if price is equal to NFT price", async () => {
+            const nftId = 1;
+
+            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+
+            const counterofferPrice = nftPrice;
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    BN.from(nftId),
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith(
+                "Marketplace: Price must be less than NFT price"
+            );
+        });
+
+        it("should revert if price is greater than NFT price", async () => {
+            const nftId = 1;
+
+            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+
+            const counterofferPrice = nftPrice.add(1);
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    BN.from(nftId),
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith(
+                "Marketplace: Price must be less than NFT price"
+            );
+        });
+
+        it("should revert if offer expired", async () => {
+            const nftId = 1;
+            const durationInDays = 0;
+            const offerPrice = counterofferPrice - 1;
+
+            const offerId = await setupAndMakeOffer(
+                collectionAddress,
+                nftId,
+                offerPrice,
+                durationInDays
+            );
+
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    nftId,
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith("Marketplace: Offer expired");
+        });
+
+        it("should revert if the NFT is not being sold by the sender", async () => {
+            const nftId = 1;
+
+            await setupAndMakeOffer(collectionAddress, nftId);
+
+            const notTheSeller = await getAnotherSigner(2);
+            const notTheSellerApi = new Marketplace(
+                marketplaceDeployment.address,
+                notTheSeller
+            );
+
+            await expect(
+                notTheSellerApi.makeCounteroffer(
+                    collectionAddress,
+                    nftId,
+                    0,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith("Marketplace: You aren't selling the NFT");
+        });
+
+        it("should save counteroffer price", async () => {
+            const nftId = 1;
+
+            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+
+            await marketplace.makeCounteroffer(
+                collectionAddress,
+                nftId,
+                offerId,
+                counterofferPrice
+            );
+            const counteroffer = await marketplace.getCounteroffer(
+                collectionAddress,
+                nftId,
+                offerId
+            );
+            expect(counteroffer.price).to.be.eq(counterofferPrice);
+        });
+
+        it("should revert if there already is a counteroffer for an offer", async () => {
+            const nftId = 1;
+
+            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+
+            await marketplace.makeCounteroffer(
+                collectionAddress,
+                nftId,
+                offerId,
+                counterofferPrice
+            );
+
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    nftId,
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.revertedWith("Marketplace: Counteroffer already exists");
+        });
+
+        it("should emit event CounterofferMade", async () => {
+            const nftId = 1;
+
+            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+
+            const counterofferId = 1;
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    nftId,
+                    offerId,
+                    counterofferPrice
+                )
+            )
+                .to.emit(await marketplace.getContract(), "CounterofferMade")
+                .withArgs(collectionAddress, nftId, offerId, counterofferId);
+        });
+
+        it("should make 2 counteroffers and set the ID of the 2nd to 2", async () => {
+            const nftId = 1;
+            const nftIdStr = nftId.toString();
+
+            await tSafeTransferFrom(signer, seller.address, nftIdStr);
+            await approveAndListingByASeller(
+                seller,
+                collectionAddress,
+                nftIdStr,
+                nftPrice
+            );
+
+            const offer1Price = 90;
+            await makeOfferAndCounteroffer(nftId, offer1Price);
+
+            const offer2Price = 93;
+            const counteroffer2Id = await makeOfferAndCounteroffer(
+                nftId,
+                offer2Price
+            );
+
+            expect(counteroffer2Id).to.be.eq(2);
+        });
+
+        async function makeOfferAndCounteroffer(
+            nftId: BigNumber | number,
+            offerPrice: number
+        ) {
+            const offerId = await marketplace.makeOfferAndGetId(
+                collectionAddress,
+                nftId,
+                offerPrice,
+                3
+            );
+            return await marketplace.makeCounterofferAndGetId(
+                collectionAddress,
+                nftId,
+                offerId,
+                offerPrice + 1
+            );
+        }
+    });
 });
+
+// @TODO tests for getCounteroffer()

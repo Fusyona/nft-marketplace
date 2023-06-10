@@ -1,33 +1,32 @@
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
-import { Event, Contract, Signer, BigNumber } from "ethers";
-
-interface NFTForSale {
-    listed: Boolean;
-    price: BigNumber;
-    seller: Address;
-    offers: Record<string, Offer>;
-    totalOffers: BigNumber;
-}
-
-interface Offer {
-    buyer: Address;
-    priceOffer: BigNumber;
-    expirationDate: number;
-}
+import {
+    Event,
+    Contract,
+    Signer,
+    BigNumber,
+    ContractTransaction,
+} from "ethers";
+import { Marketplace as MarketplaceContract } from "../typechain-types";
 
 class Marketplace {
     contractAddress: Address;
     signer: Signer;
+    // @TODO change MarketPlaceContract to IMarketplace
+    private contractSingleton: MarketplaceContract | undefined = undefined;
 
-    constructor(contractAddress: Address, signer: Signer) {
+    constructor(
+        contractAddress: Address,
+        signer: Signer,
+        private confirmations: number | undefined = undefined
+    ) {
         this.contractAddress = contractAddress;
         this.signer = signer;
     }
 
     async fusyBenefitsAccumulated(): Promise<BigNumber> {
         try {
-            return await (await this.instance()).fusyBenefitsAccumulated();
+            return await (await this.getContract()).fusyBenefitsAccumulated();
         } catch (error) {
             throw error;
         }
@@ -51,7 +50,7 @@ class Marketplace {
 
     async withdraw(): Promise<string> {
         try {
-            const receipt = await (await this.instance()).withdraw();
+            const receipt = await (await this.getContract()).withdraw();
             return this.plotUri(await receipt.wait());
         } catch (error) {
             throw error;
@@ -65,7 +64,7 @@ class Marketplace {
     ): Promise<String> {
         try {
             const receipt = await (
-                await this.instance()
+                await this.getContract()
             ).list(collectionAddress, nftId, price);
             return this.plotUri(await receipt.wait());
         } catch (error: any) {
@@ -77,7 +76,7 @@ class Marketplace {
         try {
             const dataNFT = await this.getDataNFT(collectionAddress, nftId);
             const receipt = await (
-                await this.instance()
+                await this.getContract()
             ).buy(collectionAddress, nftId, { value: dataNFT.price });
             return this.plotUri(await receipt.wait());
         } catch (error: any) {
@@ -87,20 +86,60 @@ class Marketplace {
 
     async makeOffer(
         collectionAddress: Address,
-        nftId: string,
-        priceOffer: BigNumber,
+        nftId: string, // @FIXME change type to BN|number
+        priceOffer: BigNumber | number,
         durationInDays: number
-    ): Promise<String> {
-        try {
-            const receipt = await (
-                await this.instance()
-            ).makeOffer(collectionAddress, nftId, durationInDays, {
+    ) {
+        const contract = await this.getContract();
+        return await contract.makeOffer(
+            collectionAddress,
+            nftId,
+            durationInDays,
+            {
                 value: priceOffer,
+            }
+        );
+    }
+
+    async getOfferIdFromTransaction(makeOfferTransaction: ContractTransaction) {
+        const contract = await this.getContract();
+        const offerId: BigNumber = await new Promise(async (resolve) => {
+            contract.on("OfferMade", (_, __, ___, offerId: BigNumber) => {
+                resolve(offerId);
             });
-            return this.plotUri(await receipt.wait());
-        } catch (error: any) {
-            throw error;
-        }
+            await makeOfferTransaction.wait(this.confirmations);
+        });
+        return offerId;
+    }
+
+    async makeOfferAndGetId(
+        collectionAddress: string,
+        nftId: number | BigNumber,
+        offerPrice: number | BigNumber,
+        durationInDays: number
+    ) {
+        const offerTx = await this.makeOffer(
+            collectionAddress,
+            nftId.toString(),
+            offerPrice,
+            durationInDays
+        );
+        return await this.getOfferIdFromTransaction(offerTx);
+    }
+
+    async makeCounterofferAndGetId(
+        collectionAddress: string,
+        nftId: number | BigNumber,
+        offerId: number | BigNumber,
+        newPrice: number | BigNumber
+    ) {
+        const counterofferTx = await this.makeCounteroffer(
+            collectionAddress,
+            nftId,
+            offerId,
+            newPrice
+        );
+        return await this.getCounterofferIdFromTransaction(counterofferTx);
     }
 
     async offersOf(
@@ -115,13 +154,10 @@ class Marketplace {
         }
     }
 
-    async getDataNFT(
-        collectionAddress: Address,
-        nftId: string
-    ): Promise<NFTForSale> {
+    async getDataNFT(collectionAddress: Address, nftId: string) {
         try {
-            const dataNFT: NFTForSale = await (
-                await this.instance()
+            const dataNFT = await (
+                await this.getContract()
             ).nftsListed(collectionAddress, nftId);
             if (dataNFT.listed === false) {
                 throw new Error("NFT has not been listed yet");
@@ -145,22 +181,72 @@ class Marketplace {
     }
 
     private async getEvents(eventName: string): Promise<Event[]> {
-        const marketplaceInstance: Contract = await this.instance();
+        const marketplaceInstance: Contract = await this.getContract();
         const events = await marketplaceInstance.queryFilter(eventName);
         return events;
     }
 
-    private async instance(): Promise<Contract> {
+    async getContract(): Promise<MarketplaceContract> {
+        // @TODO change return type to IMarketplace
+        if (typeof this.contractSingleton === "undefined") {
+            this.contractSingleton = await this.tryGetContract();
+        }
+        return this.contractSingleton;
+    }
+
+    async tryGetContract(): Promise<MarketplaceContract> {
         try {
-            const instanceRetrieved = await ethers.getContractAt(
+            return (await ethers.getContractAt(
                 "Marketplace",
                 this.contractAddress,
                 this.signer
-            );
-            return instanceRetrieved;
+            )) as MarketplaceContract;
         } catch (error: any) {
             throw error;
         }
+    }
+    async makeCounteroffer(
+        collectionAddress: Address,
+        nftId: BigNumber | number = 1,
+        offerId: BigNumber | number = 1,
+        newPrice: BigNumber | number = 1
+    ) {
+        const contract = await this.getContract();
+        return await contract.makeCounteroffer(
+            collectionAddress,
+            nftId,
+            offerId,
+            newPrice
+        );
+    }
+
+    async getCounterofferIdFromTransaction(
+        makeCountreofferTransaction: ContractTransaction
+    ) {
+        const contract = await this.getContract();
+        const counterofferId: BigNumber = await new Promise(async (resolve) => {
+            contract.on(
+                "CounterofferMade",
+                (_, __, ___, counterofferId: BigNumber) => {
+                    resolve(counterofferId);
+                }
+            );
+            await makeCountreofferTransaction.wait(this.confirmations);
+        });
+        return counterofferId;
+    }
+
+    async getCounteroffer(
+        collectionAddress: string,
+        nftId: BigNumber | number,
+        offerId: BigNumber | number
+    ) {
+        const contract = await this.getContract();
+        return await contract.getCounteroffer(
+            collectionAddress,
+            nftId,
+            offerId
+        );
     }
 }
 
