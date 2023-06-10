@@ -764,7 +764,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
 
             const buyer = await getAnotherSigner(2);
-            const marketplace = new Marketplace(
+            let marketplace = new Marketplace(
                 marketplaceDeployment.address,
                 buyer
             );
@@ -785,6 +785,10 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             expect(actualFusyBenefitsAcc).to.be.eq(
                 expectedBalanceOfMarketplace
+            );
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
             );
             await expect(marketplace.withdraw()).to.be.not.reverted;
         });
