@@ -1,10 +1,12 @@
 #AUTO-GENERATIVE FOLDERS
+/coverage/
 artifacts
 cache
 typechain-types
 node_modules
 
 #AUTOGENRATIVE FILES
+/coverage.json
 yarn-error.log
 
 #OTHER FILES
