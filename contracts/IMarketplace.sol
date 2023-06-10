@@ -12,6 +12,13 @@ interface IMarketplace {
         uint64 durationInDays
     ) external payable;
 
+    function makeCounteroffer(
+        address collection,
+        uint256 nftId,
+        uint256 offerId,
+        uint256 newPriceOffer
+    ) external;
+
     /**
     function cancelOffer(address collectiom, uint256 tokenId) external;
 
