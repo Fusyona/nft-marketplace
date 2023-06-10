@@ -1186,5 +1186,3 @@ describe("Testing Marketplace Smart Contract", () => {
         }
     });
 });
-
-// @TODO tests for getCounteroffer()

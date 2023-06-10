@@ -321,7 +321,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 offerId
     ) external view returns (Counteroffer memory) {
         Offer memory offer = _getOffer(collection, nftId, offerId);
-        return counteroffers[offer.counterofferId - 1]; // @TODO put this inside a public function, so info can be get from counteroffer ID
+        return counteroffers[offer.counterofferId - 1];
     }
 
     function _getOffer(

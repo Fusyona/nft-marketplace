@@ -12,7 +12,6 @@ import { Marketplace as MarketplaceContract } from "../typechain-types";
 class Marketplace {
     contractAddress: Address;
     signer: Signer;
-    // @TODO change MarketPlaceContract to IMarketplace
     private contractSingleton: MarketplaceContract | undefined = undefined;
 
     constructor(
@@ -86,7 +85,7 @@ class Marketplace {
 
     async makeOffer(
         collectionAddress: Address,
-        nftId: string, // @FIXME change type to BN|number
+        nftId: string,
         priceOffer: BigNumber | number,
         durationInDays: number
     ) {
@@ -187,7 +186,6 @@ class Marketplace {
     }
 
     async getContract(): Promise<MarketplaceContract> {
-        // @TODO change return type to IMarketplace
         if (typeof this.contractSingleton === "undefined") {
             this.contractSingleton = await this.tryGetContract();
         }
