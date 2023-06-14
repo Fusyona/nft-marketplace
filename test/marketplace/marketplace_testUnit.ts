@@ -10,7 +10,7 @@ describe("Testing Marketplace Smart Contract", () => {
     let signer: Signer;
     let marketplaceDeployment: Deployment;
     let mockERC1155CollectionDeployment: Deployment;
-
+    const ONE_DAY_IN_SECONDS = 24 * 60 *60; 
     let BN = BigNumber;
     const twoUp64 = BN.from(2).pow(64);
     const _2percent = BN.from(2).mul(twoUp64).div(BN.from(100));
@@ -876,22 +876,48 @@ describe("Testing Marketplace Smart Contract", () => {
         });
     });
     describe("takeOffer function's tests", () => {
-        it("Whether the offer's expiration date is reached the transaction should revert.", async ()=>{
+        it("reverts if expirationDate is less than the current time.", async ()=>{
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
 
             await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);  
             const daysPassed = 4;
-            const ONE_DAY_IN_SECONDS = 24 * 60 *60; 
             const daysPassedInSecondsInUnixTime = Math.floor(Date.now() / 1000) + daysPassed * ONE_DAY_IN_SECONDS;
-            time.increase(daysPassedInSecondsInUnixTime);
-            const marketplace = new Marketplace(marketplaceDeployment.address,signer);
-            const indexOfOfferMapping = 0;
+            await time.increase(daysPassedInSecondsInUnixTime);
+            const marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const indexOfOfferMapping = BN.from(0);
             await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith(
-                "The offer expired.");
+                "Marketplace: Offer expired");
             
         });
+        it("reverts if signer of is not the seller", async () => {
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const indexOfOfferMapping = BN.from(0);
+            const imNotTheSeller = await getAnotherSigner(1);
+            await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);  
+            const marketplace = new Marketplace(marketplaceDeployment.address, imNotTheSeller);
+            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith("Marketplace: Sender should be the seller");
+
+        }); 
+
+        it("reverts if the indexOfOfferMapping is greater than totalOffers", async () => {
+            const nftId = "1"
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            const indexOfOfferMapping = BN.from(3);
+            await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);
+            const buyer2 = await getAnotherSigner(2);
+            let marketplace = new Marketplace(marketplaceDeployment.address, buyer2);    
+            const priceOffer = ethers.utils.parseEther("0.98");
+            const durationInDays = 3;
+            await tMakeOffer(marketplace, collectionAddress, nftId, priceOffer, durationInDays);
+            marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith("Marketplace: Offer doesn't exist");
+        });
+
 
         async function presetRequirementsForThreeExpirationDays(collectionAddress:Address, nftId:string, price:BigNumber){
        
@@ -919,23 +945,31 @@ describe("Testing Marketplace Smart Contract", () => {
             );
         };
 
+        it("reverts, when there's just an offer over an NFT and the seller take the offer, it ownership is transfered from Marketplace to buyer.", async () => {
+            const nftId = "1";
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);  
+            const marketplace = new Marketplace(marketplaceDeployment.address,signer);
+            const indexOfOfferMapping = BN.from(0);
+            await marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping);
+            const wrappedGetDataNFT = async () => {
+                await marketplace.getDataNFT(collectionAddress, nftId);
+            };
+            await expectPromiseToFailWithMessage(
+                wrappedGetDataNFT,
+                "NFT has not been listed yet"
+            );
+        });
+
         it("A seller can accept an offer if its expiration date is not reached yet.", async ()=> {
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
-
             await presetRequirementsForThreeExpirationDays(collectionAddress, nftId, price);  
-            const daysPassed = 2;
-            const ONE_DAY_IN_SECONDS = 24 * 60 *60; 
-            const daysPassedInSecondsInUnixTime = Math.floor(Date.now() / 1000) + daysPassed * ONE_DAY_IN_SECONDS;
-            time.increase(daysPassedInSecondsInUnixTime);
-            const marketplace = new Marketplace(marketplaceDeployment.address,signer);
-            const indexOfOfferMapping = 0;
-            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.ok;            
-        });
-
-        it("When you take an offer the NFT's totalOffers should decrease in one.", async () => {
-            
+            const marketplace = new Marketplace(marketplaceDeployment.address, signer);
+            const indexOfOfferMapping = BN.from(0);
+            await expect(marketplace.takeOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.not.reverted;            
         });
     });
 });
