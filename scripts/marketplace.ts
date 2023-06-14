@@ -52,7 +52,7 @@ class Marketplace {
     async withdraw(): Promise<Receipt> {
         try {
             const receipt = await (await this.instance()).withdraw();
-            return (await receipt.wait());
+            return await receipt.wait();
         } catch (error) {
             throw error;
         }
@@ -67,7 +67,7 @@ class Marketplace {
             const receipt = await (
                 await this.instance()
             ).list(collectionAddress, nftId, price);
-            return (await receipt.wait());
+            return await receipt.wait();
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -79,7 +79,7 @@ class Marketplace {
             const receipt = await (
                 await this.instance()
             ).buy(collectionAddress, nftId, { value: dataNFT.price });
-            return (await receipt.wait());
+            return await receipt.wait();
         } catch (error: any) {
             throw error;
         }
@@ -97,17 +97,23 @@ class Marketplace {
             ).makeOffer(collectionAddress, nftId, durationInDays, {
                 value: priceOffer,
             });
-            return (await receipt.wait());
+            return await receipt.wait();
         } catch (error: any) {
             throw error;
         }
     }
 
-    async takeOffer(collectionAddress:Address, nftId:string, indexOfOfferMapping:BigNumber): Promise<Receipt> {
-        try{
-            const receipt = await (await this.instance()).takeOffer(collectionAddress, nftId, indexOfOfferMapping);
-            return (await receipt.wait());
-        }catch(error){
+    async takeOffer(
+        collectionAddress: Address,
+        nftId: string,
+        indexOfOfferMapping: BigNumber
+    ): Promise<Receipt> {
+        try {
+            const receipt = await (
+                await this.instance()
+            ).takeOffer(collectionAddress, nftId, indexOfOfferMapping);
+            return await receipt.wait();
+        } catch (error) {
             throw error;
         }
     }

@@ -102,35 +102,42 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         _trade(buyer, seller, collection, tokenId, price);
     }
 
-    function _takeOfferRequirements(NFTForSale storage nft, Offer memory  targetOffer, uint256 indexOfOfferMapping) private view {
+    function _takeOfferRequirements(
+        NFTForSale storage nft,
+        Offer memory targetOffer,
+        uint256 indexOfOfferMapping
+    ) private view {
         address seller = nft.seller;
         bool listed = nft.listed;
         uint256 totalOffers = nft.totalOffers;
         uint64 expirationDate = targetOffer.expirationDate;
-        require(msg.sender == seller, "Marketplace: Sender should be the seller");
+        require(
+            msg.sender == seller,
+            "Marketplace: Sender should be the seller"
+        );
         require(listed, "Marketplace: NFT not found");
-        require(totalOffers > indexOfOfferMapping, "Marketplace: Offer doesn't exist");
-        require(expirationDate >= block.timestamp, "Marketplace: Offer expired");
+        require(
+            totalOffers > indexOfOfferMapping,
+            "Marketplace: Offer doesn't exist"
+        );
+        require(
+            expirationDate >= block.timestamp,
+            "Marketplace: Offer expired"
+        );
     }
 
     function _trade(
-        address buyer, 
-        address seller, 
-        address collection, 
-        uint256 nftId, 
-        uint256 priceOfTrade) private {
-       _payingBenefits(seller, priceOfTrade);
+        address buyer,
+        address seller,
+        address collection,
+        uint256 nftId,
+        uint256 priceOfTrade
+    ) private {
+        _payingBenefits(seller, priceOfTrade);
         IERC1155 ierc1155 = IERC1155(collection);
-        ierc1155.safeTransferFrom(
-            address(this),
-            buyer,
-            nftId,
-            ONE_COPY,
-            ""
-        );
+        ierc1155.safeTransferFrom(address(this), buyer, nftId, ONE_COPY, "");
         emit NFTSold(buyer, seller, collection, nftId, priceOfTrade);
     }
-
 
     function makeOffer(
         address collection,
@@ -183,11 +190,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 moneyReceived = msg.value;
         uint256 moneyRequired = nft.price;
         require(
-            _purchaseRequirements(
-                nft,
-                moneyReceived,
-                moneyRequired
-            ),
+            _purchaseRequirements(nft, moneyReceived, moneyRequired),
             "Marketplace: Error in the purchase."
         );
         nft.listed = false;
@@ -208,7 +211,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         NFTForSale storage nft,
         uint256 moneyReceived,
         uint256 moneyRequired
-    ) private view returns (bool) { 
+    ) private view returns (bool) {
         return nft.listed && (moneyReceived >= moneyRequired);
     }
 
