@@ -103,6 +103,15 @@ class Marketplace {
         }
     }
 
+    async takeOffer(collectionAddress:Address, nftId:string, indexOfOfferMapping:BigNumber): Promise<Receipt> {
+        try{
+            const receipt = await (await this.instance()).takeOffer(collectionAddress, nftId, indexOfOfferMapping);
+            return (await receipt.wait());
+        }catch(error){
+            throw error;
+        }
+    }
+
     async offersOf(
         collectionAddress: Address,
         nftId: string
