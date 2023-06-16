@@ -892,7 +892,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const daysPassed = 4;
             const daysPassedInSecondsInUnixTime =
                 Math.floor(Date.now() / 1000) + daysPassed * ONE_DAY_IN_SECONDS;
-            await time.increase(daysPassedInSecondsInUnixTime);
+            await time.increaseTo(daysPassedInSecondsInUnixTime);
             const marketplace = new Marketplace(
                 marketplaceDeployment.address,
                 signer
@@ -996,7 +996,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
         }
 
-        it("reverts, when there's just an offer over an NFT and the seller take the offer, it ownership is transfered from Marketplace to buyer.", async () => {
+        it("reverts, if you try to fetch a NFT's data that was bought through a takeOffer.", async () => {
             const nftId = "1";
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
