@@ -50,12 +50,8 @@ class Marketplace {
     }
 
     async withdraw(): Promise<Receipt> {
-        try {
             const receipt = await (await this.instance()).withdraw();
             return await receipt.wait();
-        } catch (error) {
-            throw error;
-        }
     }
 
     async list(
@@ -63,26 +59,18 @@ class Marketplace {
         nftId: string,
         price: string
     ): Promise<Receipt> {
-        try {
             const receipt = await (
                 await this.instance()
             ).list(collectionAddress, nftId, price);
             return await receipt.wait();
-        } catch (error: any) {
-            throw new Error(error.message);
-        }
     }
 
     async buy(collectionAddress: Address, nftId: string): Promise<String> {
-        try {
             const dataNFT = await this.getDataNFT(collectionAddress, nftId);
             const receipt = await (
                 await this.instance()
             ).buy(collectionAddress, nftId, { value: dataNFT.price });
             return await receipt.wait();
-        } catch (error: any) {
-            throw error;
-        }
     }
 
     async makeOffer(
@@ -91,16 +79,12 @@ class Marketplace {
         priceOffer: BigNumber,
         durationInDays: number
     ): Promise<Receipt> {
-        try {
             const receipt = await (
                 await this.instance()
             ).makeOffer(collectionAddress, nftId, durationInDays, {
                 value: priceOffer,
             });
             return await receipt.wait();
-        } catch (error: any) {
-            throw error;
-        }
     }
 
     async takeOffer(
@@ -108,14 +92,10 @@ class Marketplace {
         nftId: string,
         indexOfOfferMapping: BigNumber
     ): Promise<Receipt> {
-        try {
-            const receipt = await (
-                await this.instance()
+        const receipt = await (
+            await this.instance()
             ).takeOffer(collectionAddress, nftId, indexOfOfferMapping);
             return await receipt.wait();
-        } catch (error) {
-            throw error;
-        }
     }
 
     async offersOf(
