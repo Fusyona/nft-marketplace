@@ -11,3 +11,4 @@ yarn-error.log
 .prettierignore
 .solhintignore
 gas-report.txt
+yarn-error.log
