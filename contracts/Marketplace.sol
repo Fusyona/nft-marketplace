@@ -158,7 +158,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
 
     function buy(address collection, uint256 nftId) external payable override {
         NFTForSale storage nft = nftsListed[collection][nftId];
-        address buyer = msg.sender;
         address seller = nft.seller;
         uint256 moneyReceived = msg.value;
         uint256 moneyRequired = nft.price;
@@ -171,8 +170,8 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             ),
             "Marketplace: Error in the purchase."
         );
-        delete nftsListed[collection][nftId];
-        _transferRemaining(buyer, moneyReceived, moneyRequired);
+        nft.listed = false;
+        _transferRemainingToSender(moneyReceived, moneyRequired);
         _payingBenefits(seller, moneyRequired);
         IERC1155 ierc1155 = IERC1155(collection);
         ierc1155.safeTransferFrom(
@@ -194,14 +193,13 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         return isListed(collection, nftId) && (moneyReceived >= moneyRequired);
     }
 
-    function _transferRemaining(
-        address user,
+    function _transferRemainingToSender(
         uint256 moneyReceived,
         uint256 moneyRequired
     ) private {
         uint256 remaining = moneyReceived - moneyRequired;
         if (remaining > 0) {
-            payable(user).transfer(remaining);
+            payable(msg.sender).transfer(remaining);
         }
     }
 
@@ -293,7 +291,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 newPriceOffer
     ) private view {
         require(nft.listed, "Marketplace: NFT not listed");
-
         require(offer.isInitialized, "Marketplace: Offer not found");
         require(
             newPriceOffer > offer.price,
@@ -371,6 +368,31 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     }
 
     function takeCounteroffer(uint256 id) external payable override {
+        _takeCounterofferRequirements(id);
+
+        Offer memory offer = _getOfferByCounterofferId(id);
+        Counteroffer memory counteroffer = _getCounterOfferById(id);
+        NFTForSale storage nft = nftsListed[counteroffer.collection][
+            counteroffer.nftId
+        ];
+        address seller = nft.seller;
+
+        nft.listed = false;
+        _transferRemainingToSender(offer.price + msg.value, counteroffer.price);
+        _payingBenefits(seller, counteroffer.price);
+        _transferNftToSender(counteroffer.collection, counteroffer.nftId);
+
+        emit NFTSold(
+            msg.sender,
+            seller,
+            counteroffer.collection,
+            counteroffer.nftId,
+            counteroffer.price
+        );
+        emit CounterofferTaken(id, counteroffer.price, seller);
+    }
+
+    function _takeCounterofferRequirements(uint256 id) private view {
         require(id > 0, "Marketplace: Counteroffer not found");
         require(
             id <= counteroffers.length,
@@ -390,37 +412,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             offer.price + msg.value >= counteroffer.price,
             "Marketplace: Insufficient funds"
         );
-
-        NFTForSale storage nft = nftsListed[counteroffer.collection][
-            counteroffer.nftId
-        ];
-        nft.listed = false;
-
-        address seller = nft.seller;
-
-        _transferRemaining(
-            msg.sender,
-            offer.price + msg.value,
-            counteroffer.price
-        );
-        _payingBenefits(seller, counteroffer.price);
-
-        IERC1155 ierc1155 = IERC1155(counteroffer.collection);
-        ierc1155.safeTransferFrom(
-            address(this),
-            msg.sender,
-            counteroffer.nftId,
-            ONE_COPY,
-            ""
-        );
-        emit NFTSold(
-            msg.sender,
-            seller,
-            counteroffer.collection,
-            counteroffer.nftId,
-            counteroffer.price
-        );
-        emit CounterofferTaken(id, counteroffer.price, seller);
     }
 
     function _getOfferByCounterofferId(
@@ -430,6 +421,18 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         address collection = counteroffer.collection;
         uint256 nftId = counteroffer.nftId;
         uint256 offerId = counteroffer.offerId;
+
         return _getOffer(collection, nftId, offerId);
+    }
+
+    function _transferNftToSender(address collection, uint256 nftId) private {
+        IERC1155 ierc1155 = IERC1155(collection);
+        ierc1155.safeTransferFrom(
+            address(this),
+            msg.sender,
+            nftId,
+            ONE_COPY,
+            ""
+        );
     }
 }

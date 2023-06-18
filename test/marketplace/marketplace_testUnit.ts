@@ -1240,6 +1240,10 @@ describe("Testing Marketplace Smart Contract", () => {
             );
 
             counterofferPrice = nftPrice.sub(1);
+            await makeCounteroffer(offerId);
+        });
+
+        async function makeCounteroffer(offerId: number) {
             const sellerMarketplace = new Marketplace(
                 marketplaceDeployment.address,
                 seller
@@ -1251,7 +1255,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 counterofferPrice,
                 COUNTER_OFFER_DURATION_IN_DAYS
             );
-        });
+        }
 
         it("should revert if ID is zero", async () => {
             await expect(marketplace.takeCounteroffer(0)).to.be.revertedWith(
@@ -1320,15 +1324,20 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("should increase NFT balance of buyer by 1", async () => {
             const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
-
-            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
-
             const mockErc1155 = await getErc1155Contract();
-            const buyerBalance = await mockErc1155.balanceOf(
+
+            const balanceBefore = await mockErc1155.balanceOf(
                 buyer.address,
                 nftId
             );
-            expect(buyerBalance).to.be.eq(1);
+
+            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
+
+            const balanceAfter = await mockErc1155.balanceOf(
+                buyer.address,
+                nftId
+            );
+            expect(balanceAfter.sub(balanceBefore)).to.be.eq(1);
         });
 
         async function getErc1155Contract() {
@@ -1339,15 +1348,20 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("should decrease NFT balance of marketplace by 1", async () => {
             const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
-
-            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
-
             const mockErc1155 = await getErc1155Contract();
-            const marketplaceBalance = await mockErc1155.balanceOf(
+
+            const balanceBefore = await mockErc1155.balanceOf(
                 marketplace.contractAddress,
                 nftId
             );
-            expect(marketplaceBalance).to.be.eq(0);
+
+            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
+
+            const balanceAfter = await mockErc1155.balanceOf(
+                marketplace.contractAddress,
+                nftId
+            );
+            expect(balanceBefore.sub(balanceAfter)).to.be.eq(1);
         });
 
         it("should transfer counteroffer price minus fee to seller", async () => {
