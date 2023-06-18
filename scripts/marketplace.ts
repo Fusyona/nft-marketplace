@@ -207,14 +207,16 @@ class Marketplace {
         collectionAddress: Address,
         nftId: BigNumber | number = 1,
         offerId: BigNumber | number = 1,
-        newPrice: BigNumber | number = 1
+        newPrice: BigNumber | number = 1,
+        durationInDays: number = 3
     ) {
         const contract = await this.getContract();
         return await contract.makeCounteroffer(
             collectionAddress,
             nftId,
             offerId,
-            newPrice
+            newPrice,
+            durationInDays
         );
     }
 
@@ -245,6 +247,27 @@ class Marketplace {
             nftId,
             offerId
         );
+    }
+
+    async takeCounteroffer(
+        id: BigNumber | number,
+        valueToSent: BigNumber | number = 0
+    ) {
+        const contract = await this.getContract();
+        const tx = await contract.takeCounteroffer(id, { value: valueToSent });
+        await tx.wait(this.confirmations);
+
+        return tx;
+    }
+
+    async isListed(collectionAddress: string, nftId: BigNumber | number) {
+        const contract = await this.getContract();
+        return await contract.isListed(collectionAddress, nftId);
+    }
+
+    async getFusyonaFeeFor(ethersValue: BigNumber) {
+        const contract = await this.getContract();
+        return await contract.getFusyonaFeeFor(ethersValue);
     }
 }
 
