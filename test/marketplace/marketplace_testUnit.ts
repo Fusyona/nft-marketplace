@@ -922,7 +922,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         async function setupAndMakeOffer(
-            collectionAddress: string,
+            collectionAddress: Address,
             nftId: BigNumber | number,
             offerPrice: BigNumber | number = 90,
             durationInDays = 3

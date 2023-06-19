@@ -100,7 +100,7 @@ class Marketplace {
     }
 
     async makeOfferAndGetId(
-        collectionAddress: string,
+        collectionAddress: Address,
         nftId: number | BigNumber,
         offerPrice: number | BigNumber,
         durationInDays: number
@@ -115,7 +115,7 @@ class Marketplace {
     }
 
     async makeCounterofferAndGetId(
-        collectionAddress: string,
+        collectionAddress: Address,
         nftId: number | BigNumber,
         offerId: number | BigNumber,
         newPrice: number | BigNumber
