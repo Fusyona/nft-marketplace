@@ -1,8 +1,10 @@
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
+import "@nomiclabs/hardhat-waffle";
+import "@typechain/hardhat";
+import "solidity-coverage";
 
 const config: HardhatUserConfig = {
     solidity: "0.8.18",

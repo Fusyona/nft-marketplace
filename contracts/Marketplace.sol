@@ -21,9 +21,15 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     }
 
     struct Offer {
+        bool isInitialized;
         address buyer;
         uint256 priceOffer;
         uint64 expirationDate;
+        uint256 counterofferId;
+    }
+
+    struct Counteroffer {
+        uint256 price;
     }
 
     int128 public feeRatio = MathFees._npercent(int128(2));
@@ -31,10 +37,12 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
 
     uint256 internal constant ONE_COPY = 1;
     uint64 internal constant ONE_DAY_IN_SECONDS = uint64(24 * 60 * 60);
+    uint256 internal constant NO_COUNTER_OFFER = 0;
 
     uint256 public fusyBenefitsAccumulated;
 
     mapping(address => mapping(uint256 => NFTForSale)) public nftsListed;
+    Counteroffer[] counteroffers;
 
     event NFTListed(
         address indexed seller,
@@ -54,6 +62,12 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         address indexed collection,
         uint256 indexed nftId,
         uint256 offerId
+    );
+    event CounterofferMade(
+        address indexed collection,
+        uint256 indexed nftId,
+        uint256 indexed offerId,
+        uint256 counterofferId
     );
     event RootWithdrawal(address indexed beneficiary, uint256 amount);
 
@@ -151,11 +165,13 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         );
         address buyer = msg.sender;
         Offer memory offer = Offer({
+            isInitialized: true,
             buyer: buyer,
             priceOffer: priceOffer,
             expirationDate: uint64(block.timestamp) +
                 durationInDays *
-                ONE_DAY_IN_SECONDS
+                ONE_DAY_IN_SECONDS,
+            counterofferId: NO_COUNTER_OFFER
         });
         NFTForSale storage nft = nftsListed[collection][nftId];
         uint256 offerId = nft.totalOffers;
@@ -175,10 +191,10 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     }
 
     function minPriceOffer(
-        address collectinn,
+        address collection,
         uint256 nftId
     ) public view returns (uint256) {
-        NFTForSale storage nft = nftsListed[collectinn][nftId];
+        NFTForSale storage nft = nftsListed[collection][nftId];
         uint256 currentPrice = nft.price;
         return (currentPrice - floorRatio.mulu(currentPrice));
     }
@@ -282,5 +298,83 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     ) private view returns (bool) {
         IERC1155 ierc1155 = IERC1155(collection);
         return ierc1155.balanceOf(seller, nftId) > 0;
+    }
+
+    function makeCounteroffer(
+        address collection,
+        uint256 nftId,
+        uint256 offerId,
+        uint256 newPrice
+    ) external override {
+        NFTForSale storage nft = nftsListed[collection][nftId];
+        Offer storage offer = nft.offers[offerId];
+        _makeCounterofferRequirements(nft, offer, newPrice);
+
+        uint256 counterofferId = _saveCounteroffer(offer, newPrice);
+
+        emit CounterofferMade(collection, nftId, offerId, counterofferId);
+    }
+
+    function _makeCounterofferRequirements(
+        NFTForSale storage nft,
+        Offer storage offer,
+        uint256 newPriceOffer
+    ) private view {
+        require(nft.listed, "Marketplace: NFT not listed");
+
+        require(offer.isInitialized, "Marketplace: Offer not found");
+        require(
+            newPriceOffer > offer.priceOffer,
+            "Marketplace: Price must be greater than offer"
+        );
+        require(
+            newPriceOffer < nft.price,
+            "Marketplace: Price must be less than NFT price"
+        );
+        require(
+            offer.expirationDate > block.timestamp,
+            "Marketplace: Offer expired"
+        );
+        require(
+            msg.sender == nft.seller,
+            "Marketplace: You aren't selling the NFT"
+        );
+        require(
+            _hasNotCounteroffer(offer),
+            "Marketplace: Counteroffer already exists"
+        );
+    }
+
+    function _hasNotCounteroffer(
+        Offer storage offer
+    ) private view returns (bool) {
+        return offer.counterofferId == NO_COUNTER_OFFER;
+    }
+
+    function _saveCounteroffer(
+        Offer storage offer,
+        uint256 newPrice
+    ) private returns (uint256 counterofferId) {
+        counteroffers.push(Counteroffer({price: newPrice}));
+
+        counterofferId = counteroffers.length;
+        offer.counterofferId = counterofferId;
+    }
+
+    function getCounteroffer(
+        address collection,
+        uint256 nftId,
+        uint256 offerId
+    ) external view returns (Counteroffer memory) {
+        Offer memory offer = _getOffer(collection, nftId, offerId);
+        return counteroffers[offer.counterofferId - 1];
+    }
+
+    function _getOffer(
+        address collection,
+        uint256 nftId,
+        uint256 offerId
+    ) private view returns (Offer memory) {
+        return nftsListed[collection][nftId].offers[offerId];
     }
 }
