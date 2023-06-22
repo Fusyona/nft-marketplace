@@ -35,6 +35,12 @@ interface IMarketplace {
         uint256 newPrice
     ) external;
 
+    function takeOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external;
+
     /**
     function cancelOffer(address collectiom, uint256 tokenId) external;
 
