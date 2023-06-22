@@ -48,12 +48,8 @@ class Marketplace {
     }
 
     async withdraw(): Promise<Receipt> {
-        try {
-            const receipt = await (await this.getContract()).withdraw();
-            return await receipt.wait();
-        } catch (error) {
-            throw error;
-        }
+        const receipt = await (await this.getContract()).withdraw();
+        return await receipt.wait();
     }
 
     async list(
@@ -61,26 +57,18 @@ class Marketplace {
         nftId: string,
         price: string
     ): Promise<Receipt> {
-        try {
-            const receipt = await (
-                await this.getContract()
-            ).list(collectionAddress, nftId, price);
-            return await receipt.wait();
-        } catch (error: any) {
-            throw new Error(error.message);
-        }
+        const receipt = await (
+            await this.getContract()
+        ).list(collectionAddress, nftId, price);
+        return await receipt.wait();
     }
 
-    async buy(collectionAddress: Address, nftId: string): Promise<Receipt> {
-        try {
-            const dataNFT = await this.getDataNFT(collectionAddress, nftId);
-            const receipt = await (
-                await this.getContract()
-            ).buy(collectionAddress, nftId, { value: dataNFT.price });
-            return await receipt.wait();
-        } catch (error: any) {
-            throw error;
-        }
+    async buy(collectionAddress: Address, nftId: string) {
+        const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+        const receipt = await (
+            await this.getContract()
+        ).buy(collectionAddress, nftId, { value: dataNFT.price });
+        return await receipt.wait();
     }
 
     async makeOffer(
@@ -112,7 +100,7 @@ class Marketplace {
     }
 
     async makeOfferAndGetId(
-        collectionAddress: string,
+        collectionAddress: Address,
         nftId: number | BigNumber,
         offerPrice: number | BigNumber,
         durationInDays: number
@@ -127,7 +115,7 @@ class Marketplace {
     }
 
     async makeCounterofferAndGetId(
-        collectionAddress: string,
+        collectionAddress: Address,
         nftId: number | BigNumber,
         offerId: number | BigNumber,
         newPrice: number | BigNumber
@@ -139,6 +127,17 @@ class Marketplace {
             newPrice
         );
         return await this.getCounterofferIdFromTransaction(counterofferTx);
+    }
+
+    async takeOffer(
+        collectionAddress: Address,
+        nftId: string,
+        indexOfOfferMapping: BigNumber
+    ): Promise<Receipt> {
+        const receipt = await (
+            await this.getContract()
+        ).takeOffer(collectionAddress, nftId, indexOfOfferMapping);
+        return await receipt.wait();
     }
 
     async offersOf(

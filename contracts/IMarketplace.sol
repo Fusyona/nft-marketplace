@@ -29,6 +29,12 @@ interface IMarketplace {
 
     function getFusyonaFeeFor(uint256 price) external view returns (uint256);
 
+    function takeOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external;
+
     /**
     function cancelOffer(address collectiom, uint256 tokenId) external;
 
