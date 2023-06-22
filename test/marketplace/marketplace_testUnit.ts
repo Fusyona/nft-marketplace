@@ -1059,7 +1059,6 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("should revert if offer expired", async () => {
-            // @FIXME if block.timestamp == expirationDate then it's not expired yet
             const nftId = 1;
             const durationInDays = 0;
             const offerPrice = counterofferPrice - 1;
