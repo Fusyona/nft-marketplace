@@ -3,7 +3,7 @@ import { assert, expect } from "chai";
 import { Marketplace } from "../../scripts/marketplace";
 import { Signer, BigNumber } from "ethers";
 import { Address, Deployment } from "hardhat-deploy/types";
-import { ERC1155 } from "../../typechain-types";
+import { ERC1155, MockERC1155Collection } from "../../typechain-types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -77,6 +77,38 @@ describe("Testing Marketplace Smart Contract", () => {
             ).setApprovalForAll(marketplace.contractAddress, true);
         } catch (error) {
             throw error;
+        }
+    }
+
+    class NftSaleHelper {
+        constructor(
+            private seller: SignerWithAddress,
+            private nftPrice: BigNumber,
+            private buyerMarketplace: Marketplace
+        ) {}
+
+        async setupAndMakeOffer(
+            collectionAddress: string,
+            nftId: BigNumber | number,
+            offerPrice: BigNumber | number = 90,
+            durationInDays = 3
+        ) {
+            const nftIdStr = nftId.toString();
+            await tSafeTransferFrom(signer, this.seller.address, nftIdStr);
+            await approveAndListingByASeller(
+                this.seller,
+                collectionAddress,
+                nftIdStr,
+                this.nftPrice
+            );
+            await this.buyerMarketplace.makeOffer(
+                collectionAddress,
+                nftIdStr,
+                offerPrice,
+                durationInDays
+            );
+            const offerId = 0;
+            return offerId;
         }
     }
 
@@ -887,6 +919,7 @@ describe("Testing Marketplace Smart Contract", () => {
         const nftPrice = BN.from(100);
         const counterofferPrice = 91;
         let collectionAddress: Address;
+        let helper: NftSaleHelper;
 
         beforeEach(async () => {
             seller = await getAnotherSigner(1);
@@ -895,6 +928,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 seller
             );
             collectionAddress = mockERC1155CollectionDeployment.address;
+            helper = new NftSaleHelper(seller, nftPrice, marketplace);
         });
 
         it("should revert if no NFT is listed from a collection", async () => {
@@ -908,7 +942,7 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should revert if the NFT ID is not listed for a collection with a previously listed NFT", async () => {
             const listedNftId = 1;
 
-            await setupAndMakeOffer(collectionAddress, listedNftId);
+            await helper.setupAndMakeOffer(collectionAddress, listedNftId);
 
             const unlistedNftId = 2;
 
@@ -921,34 +955,10 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.revertedWith("Marketplace: NFT not listed");
         });
 
-        async function setupAndMakeOffer(
-            collectionAddress: Address,
-            nftId: BigNumber | number,
-            offerPrice: BigNumber | number = 90,
-            durationInDays = 3
-        ) {
-            const nftIdStr = nftId.toString();
-            await tSafeTransferFrom(signer, seller.address, nftIdStr);
-            await approveAndListingByASeller(
-                seller,
-                collectionAddress,
-                nftIdStr,
-                nftPrice
-            );
-            await marketplace.makeOffer(
-                collectionAddress,
-                nftIdStr,
-                offerPrice,
-                durationInDays
-            );
-            const offerId = 0;
-            return offerId;
-        }
-
         it("should revert if the offer doesn't exist when the NFT does it", async () => {
             const nftId = 1;
 
-            await setupAndMakeOffer(collectionAddress, nftId);
+            await helper.setupAndMakeOffer(collectionAddress, nftId);
 
             const unexistingOfferId = 1;
             await expect(
@@ -964,7 +974,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const nftId = 1;
             const offerPrice = 90;
 
-            const offerId = await setupAndMakeOffer(
+            const offerId = await helper.setupAndMakeOffer(
                 collectionAddress,
                 nftId,
                 offerPrice
@@ -987,7 +997,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const nftId = 1;
             const offerPrice = 90;
 
-            const offerId = await setupAndMakeOffer(
+            const offerId = await helper.setupAndMakeOffer(
                 collectionAddress,
                 nftId,
                 offerPrice
@@ -1009,7 +1019,10 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should revert if price is equal to NFT price", async () => {
             const nftId = 1;
 
-            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId
+            );
 
             const counterofferPrice = nftPrice;
             await expect(
@@ -1027,7 +1040,10 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should revert if price is greater than NFT price", async () => {
             const nftId = 1;
 
-            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId
+            );
 
             const counterofferPrice = nftPrice.add(1);
             await expect(
@@ -1047,7 +1063,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const durationInDays = 0;
             const offerPrice = counterofferPrice - 1;
 
-            const offerId = await setupAndMakeOffer(
+            const offerId = await helper.setupAndMakeOffer(
                 collectionAddress,
                 nftId,
                 offerPrice,
@@ -1067,7 +1083,7 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should revert if the NFT is not being sold by the sender", async () => {
             const nftId = 1;
 
-            await setupAndMakeOffer(collectionAddress, nftId);
+            await helper.setupAndMakeOffer(collectionAddress, nftId);
 
             const notTheSeller = await getAnotherSigner(2);
             const notTheSellerApi = new Marketplace(
@@ -1088,7 +1104,10 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should save counteroffer price", async () => {
             const nftId = 1;
 
-            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId
+            );
 
             await marketplace.makeCounteroffer(
                 collectionAddress,
@@ -1107,7 +1126,10 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should revert if there already is a counteroffer for an offer", async () => {
             const nftId = 1;
 
-            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId
+            );
 
             await marketplace.makeCounteroffer(
                 collectionAddress,
@@ -1129,7 +1151,10 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should emit event CounterofferMade", async () => {
             const nftId = 1;
 
-            const offerId = await setupAndMakeOffer(collectionAddress, nftId);
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId
+            );
 
             const counterofferId = 1;
             await expect(
@@ -1186,6 +1211,191 @@ describe("Testing Marketplace Smart Contract", () => {
             );
         }
     });
+
+    describe("TakeCounteroffer function tests", () => {
+        let seller: SignerWithAddress;
+        let buyer: SignerWithAddress;
+        let marketplace: Marketplace;
+        let collectionAddress: Address;
+        let helper: NftSaleHelper;
+        const COUNTER_OFFER_DURATION_IN_DAYS = 3;
+        const offerPrice = 90;
+        let counterofferPrice: BigNumber;
+        const nftId = 1;
+
+        beforeEach(async () => {
+            seller = await getAnotherSigner(1);
+            buyer = await getAnotherSigner(2);
+
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            collectionAddress = mockERC1155CollectionDeployment.address;
+            const nftPrice = BN.from(100);
+            helper = new NftSaleHelper(seller, nftPrice, marketplace);
+
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId
+            );
+
+            counterofferPrice = nftPrice.sub(1);
+            await makeCounteroffer(offerId);
+        });
+
+        async function makeCounteroffer(offerId: number) {
+            const sellerMarketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
+            await sellerMarketplace.makeCounteroffer(
+                collectionAddress,
+                nftId,
+                offerId,
+                counterofferPrice,
+                COUNTER_OFFER_DURATION_IN_DAYS
+            );
+        }
+
+        it("should revert if ID is zero", async () => {
+            await expect(marketplace.takeCounteroffer(0)).to.be.revertedWith(
+                "Marketplace: Counteroffer not found"
+            );
+        });
+
+        it("should revert if ID is greater than total counteroffers", async () => {
+            const TOTAL_COUNTER_OFFERS = 1;
+            const id = TOTAL_COUNTER_OFFERS + 1;
+
+            await expect(marketplace.takeCounteroffer(id)).to.be.revertedWith(
+                "Marketplace: Counteroffer not found"
+            );
+        });
+
+        it("should revert if sender didn't make the offer", async () => {
+            const notTheOfferMaker = seller;
+
+            const notTheOfferMakerApi = new Marketplace(
+                marketplaceDeployment.address,
+                notTheOfferMaker
+            );
+            await expect(
+                notTheOfferMakerApi.takeCounteroffer(1)
+            ).to.be.revertedWith("Marketplace: You didn't make the offer");
+        });
+
+        it("should revert if counteroffer expired", async () => {
+            await time.increase(
+                COUNTER_OFFER_DURATION_IN_DAYS * ONE_DAY_IN_SECONDS
+            );
+
+            await expect(marketplace.takeCounteroffer(1)).to.be.revertedWith(
+                "Marketplace: Counteroffer expired"
+            );
+        });
+
+        it("should revert if sent value + offer price is less than counteroffer price", async () => {
+            const insufficientValueToSend = counterofferPrice
+                .sub(offerPrice)
+                .sub(1);
+
+            await expect(
+                marketplace.takeCounteroffer(1, insufficientValueToSend)
+            ).to.be.revertedWith("Marketplace: Insufficient funds");
+        });
+
+        it("should emit event CounterofferTaken", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+            const counterofferId = 1;
+
+            await expect(marketplace.takeCounteroffer(1, necessaryAmountToSend))
+                .to.emit(await marketplace.getContract(), "CounterofferTaken")
+                .withArgs(counterofferId, counterofferPrice, seller.address);
+        });
+
+        it("should unlist NFT", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+
+            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
+
+            const isListed = await marketplace.isListed(collectionAddress, 1);
+            expect(isListed).to.be.false;
+        });
+
+        it("should increase NFT balance of buyer by 1", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+            const mockErc1155 = await getErc1155Contract();
+
+            const balanceBefore = await mockErc1155.balanceOf(
+                buyer.address,
+                nftId
+            );
+
+            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
+
+            const balanceAfter = await mockErc1155.balanceOf(
+                buyer.address,
+                nftId
+            );
+            expect(balanceAfter.sub(balanceBefore)).to.be.eq(1);
+        });
+
+        async function getErc1155Contract() {
+            return (await ethers.getContract(
+                "MockERC1155Collection"
+            )) as MockERC1155Collection;
+        }
+
+        it("should decrease NFT balance of marketplace by 1", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+            const mockErc1155 = await getErc1155Contract();
+
+            const balanceBefore = await mockErc1155.balanceOf(
+                marketplace.contractAddress,
+                nftId
+            );
+
+            await marketplace.takeCounteroffer(1, necessaryAmountToSend);
+
+            const balanceAfter = await mockErc1155.balanceOf(
+                marketplace.contractAddress,
+                nftId
+            );
+            expect(balanceBefore.sub(balanceAfter)).to.be.eq(1);
+        });
+
+        it("should transfer counteroffer price minus fee to seller", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+
+            const fee = await marketplace.getFusyonaFeeFor(counterofferPrice);
+
+            await expect(
+                marketplace.takeCounteroffer(1, necessaryAmountToSend)
+            ).to.changeEtherBalance(seller, counterofferPrice.sub(fee));
+        });
+
+        it("should only discount counterofferprice - offer price from buyer's balance", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+            const moreThanNecessaryToSend = necessaryAmountToSend.add(1);
+
+            await expect(
+                marketplace.takeCounteroffer(1, moreThanNecessaryToSend)
+            ).to.changeEtherBalance(buyer, `-${necessaryAmountToSend}`);
+        });
+
+        it("should emit event `NFTSold`", async () => {
+            const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
+
+            await expect(marketplace.takeCounteroffer(1, necessaryAmountToSend))
+                .to.emit(await marketplace.getContract(), "NFTSold")
+                .withArgs(
+                    buyer.address,
+                    seller.address,
+                    collectionAddress,
+                    nftId,
+                    counterofferPrice
+                );
+        });
+    });
+
     describe("TakeOffer function's tests", () => {
         it("reverts if expirationDate is less than the current time.", async () => {
             const nftId = "1";

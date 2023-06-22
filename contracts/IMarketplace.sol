@@ -16,8 +16,18 @@ interface IMarketplace {
         address collection,
         uint256 nftId,
         uint256 offerId,
-        uint256 newPriceOffer
+        uint256 newPriceOffer,
+        uint64 durationInDays
     ) external;
+
+    function takeCounteroffer(uint256 id) external payable;
+
+    function isListed(
+        address collection,
+        uint256 nftId
+    ) external view returns (bool);
+
+    function getFusyonaFeeFor(uint256 price) external view returns (uint256);
 
     function takeOffer(
         address collection,
