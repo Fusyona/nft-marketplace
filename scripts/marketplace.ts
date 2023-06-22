@@ -268,6 +268,20 @@ class Marketplace {
         const contract = await this.getContract();
         return await contract.getFusyonaFeeFor(ethersValue);
     }
+
+    async changePriceOf(
+        collectionAddress: Address,
+        nftId: BigNumber | number,
+        newPrice: BigNumber | number
+    ) {
+        const contract = await this.getContract();
+        return await contract.changePriceOf(collectionAddress, nftId, newPrice);
+    }
+
+    async nftsListed(collectionAddress: Address, nftId: BigNumber | number) {
+        const contract = await this.getContract();
+        return await contract.nftsListed(collectionAddress, nftId);
+    }
 }
 
 export { Marketplace };

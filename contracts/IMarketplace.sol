@@ -14,7 +14,7 @@ interface IMarketplace {
 
     function makeCounteroffer(
         address collection,
-        uint256 nftId,
+        uint256 tokenId,
         uint256 offerId,
         uint256 newPriceOffer,
         uint64 durationInDays
@@ -24,10 +24,16 @@ interface IMarketplace {
 
     function isListed(
         address collection,
-        uint256 nftId
+        uint256 tokenId
     ) external view returns (bool);
 
     function getFusyonaFeeFor(uint256 price) external view returns (uint256);
+
+    function changePriceOf(
+        address collection,
+        uint256 tokenId,
+        uint256 newPrice
+    ) external;
 
     function takeOffer(
         address collection,

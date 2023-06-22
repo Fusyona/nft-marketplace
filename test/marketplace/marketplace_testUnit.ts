@@ -1396,6 +1396,101 @@ describe("Testing Marketplace Smart Contract", () => {
         });
     });
 
+    describe("ChangePriceOf function tests", () => {
+        let seller: SignerWithAddress;
+        let marketplace: Marketplace;
+        let collectionAddress: Address;
+        const nftId = 1;
+        const nftPrice = BN.from(100);
+        const newPrice = nftPrice.add(100);
+
+        beforeEach(async () => {
+            seller = await getAnotherSigner(1);
+
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
+            collectionAddress = mockERC1155CollectionDeployment.address;
+
+            const nftIdStr = nftId.toString();
+            await tSafeTransferFrom(signer, seller.address, nftIdStr);
+
+            await approveAndListingByASeller(
+                seller,
+                collectionAddress,
+                nftIdStr,
+                nftPrice
+            );
+        });
+
+        it("should revert if no NFT is listed from a collection", async () => {
+            const notListedCollectionAddress = seller.address;
+
+            await expect(
+                marketplace.changePriceOf(
+                    notListedCollectionAddress,
+                    nftId,
+                    newPrice
+                )
+            ).to.be.revertedWith("Marketplace: NFT not listed");
+        });
+
+        it("should revert if NFT is not listed", async () => {
+            const notListedNftId = 2;
+
+            await expect(
+                marketplace.changePriceOf(
+                    collectionAddress,
+                    notListedNftId,
+                    newPrice
+                )
+            ).to.be.revertedWith("Marketplace: NFT not listed");
+        });
+
+        it("should revert if the NFT is not being sold by the sender", async () => {
+            const notTheSeller = await getAnotherSigner(2);
+            const notTheSellerApi = new Marketplace(
+                marketplaceDeployment.address,
+                notTheSeller
+            );
+
+            await expect(
+                notTheSellerApi.changePriceOf(
+                    collectionAddress,
+                    nftId,
+                    newPrice
+                )
+            ).to.be.revertedWith("Marketplace: You aren't selling the NFT");
+        });
+
+        it("should revert if new price equals current price", async () => {
+            await expect(
+                marketplace.changePriceOf(collectionAddress, nftId, nftPrice)
+            ).to.be.revertedWith(
+                "Marketplace: New price is the same as current price"
+            );
+        });
+
+        it("should change price of NFT", async () => {
+            await marketplace.changePriceOf(collectionAddress, nftId, newPrice);
+
+            const nftInfo = await marketplace.nftsListed(
+                collectionAddress,
+                nftId
+            );
+            expect(nftInfo.price).to.be.eq(newPrice);
+        });
+
+        it("should emit event `NFTPriceChanged`", async () => {
+            await expect(
+                marketplace.changePriceOf(collectionAddress, nftId, newPrice)
+            )
+                .to.emit(await marketplace.getContract(), "NFTPriceChanged")
+                .withArgs(collectionAddress, nftId, newPrice);
+        });
+    });
+
     describe("TakeOffer function's tests", () => {
         it("reverts if expirationDate is less than the current time.", async () => {
             const nftId = "1";
