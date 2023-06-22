@@ -79,6 +79,11 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         address indexed seller
     );
     event RootWithdrawal(address indexed beneficiary, uint256 amount);
+    event NFTPriceChanged(
+        address indexed collection,
+        uint256 indexed nftId,
+        uint256 newPrice
+    );
 
     constructor() {}
 
@@ -433,6 +438,34 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             nftId,
             ONE_COPY,
             ""
+        );
+    }
+
+    function changePriceOf(
+        address collection,
+        uint256 tokenId,
+        uint256 newPrice
+    ) external override {
+        NFTForSale storage nft = nftsListed[collection][tokenId];
+        _changePriceRequirements(nft, newPrice);
+
+        nft.price = newPrice;
+
+        emit NFTPriceChanged(collection, tokenId, newPrice);
+    }
+
+    function _changePriceRequirements(
+        NFTForSale storage nft,
+        uint256 newPrice
+    ) private view {
+        require(nft.listed, "Marketplace: NFT not listed");
+        require(
+            msg.sender == nft.seller,
+            "Marketplace: You aren't selling the NFT"
+        );
+        require(
+            newPrice != nft.price,
+            "Marketplace: New price is the same as current price"
         );
     }
 }

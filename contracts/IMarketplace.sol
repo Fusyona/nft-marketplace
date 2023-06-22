@@ -24,10 +24,16 @@ interface IMarketplace {
 
     function isListed(
         address collection,
-        uint256 nftId
+        uint256 nftId // @FIXME rename to tokenId
     ) external view returns (bool);
 
     function getFusyonaFeeFor(uint256 price) external view returns (uint256);
+
+    function changePriceOf(
+        address collection,
+        uint256 tokenId,
+        uint256 newPrice
+    ) external;
 
     /**
     function cancelOffer(address collectiom, uint256 tokenId) external;
