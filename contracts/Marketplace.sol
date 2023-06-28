@@ -352,7 +352,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             "Marketplace: Price must be less than NFT price"
         );
         require(
-            offer.expirationDate > block.timestamp,
+            offer.expirationDate >= block.timestamp,
             "Marketplace: Offer expired"
         );
         require(
