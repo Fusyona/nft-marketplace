@@ -1699,10 +1699,10 @@ describe("Testing Marketplace Smart Contract", () => {
     describe("CancelOffer function's tests", () => {
         let seller: SignerWithAddress;
         let buyer: SignerWithAddress;
-        let imNotTheBuyer:SignerWithAddress;
+        let imNotTheBuyer: SignerWithAddress;
         let marketplace: Marketplace;
         let collectionAddress: Address;
-        let indexOfOfferMapping:number; 
+        let indexOfOfferMapping: number;
         const nftId = 1;
         const nftPrice = ethers.utils.parseEther("10");
         const newPrice = ethers.utils.parseEther("9");
@@ -1716,41 +1716,102 @@ describe("Testing Marketplace Smart Contract", () => {
             collectionAddress = mockERC1155CollectionDeployment.address;
             await tSafeTransferFrom(signer, seller.address, nftId.toString());
 
-            await approveAndListingByASeller(seller, collectionAddress, nftId.toString(), nftPrice);
-            await tMakeOffer(marketplace, collectionAddress, nftId.toString(), newPrice, 3);
+            await approveAndListingByASeller(
+                seller,
+                collectionAddress,
+                nftId.toString(),
+                nftPrice
+            );
+            await tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId.toString(),
+                newPrice,
+                3
+            );
+        });
 
-        });
-        
         it("should revert if the sender is not the buyer (offer's owner)", async () => {
-            marketplace = new Marketplace(marketplaceDeployment.address, imNotTheBuyer);  
-            await expect(marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith("Marketplace: Wrong Buyer");
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                imNotTheBuyer
+            );
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Wrong Buyer");
         });
-   
+
         it("should revert if offer id doesn't exist.", async () => {
             indexOfOfferMapping = 1;
-            await expect(marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith("Marketplace: Offer not found");
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer not found");
         });
-        
+
         it("should not revert when the offer's owner (buyer) cancel the offer", async () => {
-            await expect(marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.not.reverted;
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.not.reverted;
         });
 
         it("should emit CanceledOffer event", async () => {
-            await expect(marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)).to
-            .emit(await marketplace.getContract(), "CanceledOffer")
-            .withArgs(collectionAddress, nftId, indexOfOfferMapping, newPrice, buyer.address);
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            )
+                .to.emit(await marketplace.getContract(), "CanceledOffer")
+                .withArgs(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping,
+                    newPrice,
+                    buyer.address
+                );
         });
 
         it("should revert if buyer try to cancel an offer that was already canceled", async () => {
-            await marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping);
-            await expect(marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)).to.be.revertedWith("Marketplace: Offer already was canceled");
+            await marketplace.cancelOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            );
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer already was canceled");
         });
-       
+
         it("When an offer is canceled, the money that collateralize it, it's go out from the Marketplace Contract.", async () => {
-            await marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping);
+            await marketplace.cancelOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            );
             const expectedMarketplaceBalance = 0;
-            const actualMarketplaceBalance = await ethers.provider.getBalance(marketplaceDeployment.address);
-            expect(actualMarketplaceBalance).to.be.eq(expectedMarketplaceBalance);
+            const actualMarketplaceBalance = await ethers.provider.getBalance(
+                marketplaceDeployment.address
+            );
+            expect(actualMarketplaceBalance).to.be.eq(
+                expectedMarketplaceBalance
+            );
         });
     });
 });

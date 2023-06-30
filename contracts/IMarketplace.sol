@@ -41,13 +41,19 @@ interface IMarketplace {
         uint256 indexOfOfferMapping
     ) external;
 
-    function cancelOffer(address collectiom, uint256 tokenId, uint256 indexOfOfferMapping) external;
+    function cancelOffer(
+        address collectiom,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external;
 
-    function setFeeRatio(int128 _percentageMultipliedBy2Up64AndTwoDecimals) external;
+    function setFeeRatio(
+        int128 _percentageMultipliedBy2Up64AndTwoDecimals
+    ) external;
 
     function withdraw() external;
 
-  /**
+    /**
     function setMinOfferPrice(uint256 value) external;
      * 
      */

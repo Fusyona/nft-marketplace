@@ -86,30 +86,51 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
     );
     event CanceledOffer(
         address indexed collection,
-        uint256 indexed tokenId, 
+        uint256 indexed tokenId,
         uint256 indexOfOfferMapping,
-        uint256 priceOffer, 
+        uint256 priceOffer,
         address indexed buyer
-        );
+    );
 
     constructor() {}
 
     receive() external payable {}
 
-    function cancelOffer(address collection, uint256 tokenId, uint256 indexOfOfferMapping) external override {
+    function cancelOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external override {
         _cancelOfferRequirements(collection, tokenId, indexOfOfferMapping);
-        Offer storage offer = nftsListed[collection][tokenId].offers[indexOfOfferMapping];
+        Offer storage offer = nftsListed[collection][tokenId].offers[
+            indexOfOfferMapping
+        ];
         offer.isInitialized = false;
         uint256 moneyToRebase = offer.price;
         address buyer = offer.buyer;
         payable(buyer).transfer(moneyToRebase);
-        emit CanceledOffer(collection, tokenId, indexOfOfferMapping, moneyToRebase, buyer);
+        emit CanceledOffer(
+            collection,
+            tokenId,
+            indexOfOfferMapping,
+            moneyToRebase,
+            buyer
+        );
     }
 
-    function _cancelOfferRequirements(address collection, uint256 tokenId, uint256 indexOfOfferMapping) private view {
-        NFTForSale storage nft = nftsListed[collection][tokenId];        
-        require(nft.totalOffers > indexOfOfferMapping, "Marketplace: Offer not found");
-        Offer memory offer = nftsListed[collection][tokenId].offers[indexOfOfferMapping];
+    function _cancelOfferRequirements(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) private view {
+        NFTForSale storage nft = nftsListed[collection][tokenId];
+        require(
+            nft.totalOffers > indexOfOfferMapping,
+            "Marketplace: Offer not found"
+        );
+        Offer memory offer = nftsListed[collection][tokenId].offers[
+            indexOfOfferMapping
+        ];
         require(msg.sender == offer.buyer, "Marketplace: Wrong Buyer");
         require(offer.isInitialized, "Marketplace: Offer already was canceled");
     }

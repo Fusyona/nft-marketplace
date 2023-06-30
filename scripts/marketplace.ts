@@ -88,14 +88,30 @@ class Marketplace {
         );
     }
 
-    async cancelOffer(collectionAddress: Address, nftId: BigNumber | number, indexOfOfferMapping: BigNumber | number) {
+    async cancelOffer(
+        collectionAddress: Address,
+        nftId: BigNumber | number,
+        indexOfOfferMapping: BigNumber | number
+    ) {
         const contract = await this.getContract();
-        return await contract.cancelOffer(collectionAddress, nftId, indexOfOfferMapping);
+        return await contract.cancelOffer(
+            collectionAddress,
+            nftId,
+            indexOfOfferMapping
+        );
     }
 
-    async getOffer(collectionAddress: Address, nftId: BigNumber | number, indexOfOfferMapping: BigNumber | number) {
+    async getOffer(
+        collectionAddress: Address,
+        nftId: BigNumber | number,
+        indexOfOfferMapping: BigNumber | number
+    ) {
         const contract = await this.getContract();
-        return await contract.getOffer(collectionAddress, nftId, indexOfOfferMapping);
+        return await contract.getOffer(
+            collectionAddress,
+            nftId,
+            indexOfOfferMapping
+        );
     }
 
     async getOfferIdFromTransaction(makeOfferTransaction: ContractTransaction) {
