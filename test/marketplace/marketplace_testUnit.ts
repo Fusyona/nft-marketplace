@@ -1059,9 +1059,9 @@ describe("Testing Marketplace Smart Contract", () => {
             );
         });
 
-        it("should revert if offer expired", async () => {
+        it("should revert if offer expired one second before the current block timestamp", async () => {
             const nftId = 1;
-            const durationInDays = 0;
+            const durationInDays = 1;
             const offerPrice = counterofferPrice - 1;
 
             const offerId = await helper.setupAndMakeOffer(
@@ -1069,6 +1069,12 @@ describe("Testing Marketplace Smart Contract", () => {
                 nftId,
                 offerPrice,
                 durationInDays
+            );
+
+            const durationInSeconds = durationInDays * ONE_DAY_IN_SECONDS;
+            const BLOCK_MINED_BEFORE_NEXT_TRANSACTION = 1;
+            await time.increase(
+                durationInSeconds + 1 - BLOCK_MINED_BEFORE_NEXT_TRANSACTION
             );
 
             await expect(
@@ -1079,6 +1085,34 @@ describe("Testing Marketplace Smart Contract", () => {
                     counterofferPrice
                 )
             ).to.be.revertedWith("Marketplace: Offer expired");
+        });
+
+        it("should not revert if offer expires in the current block", async () => {
+            const nftId = 1;
+            const durationInDays = 1;
+            const offerPrice = counterofferPrice - 1;
+
+            const offerId = await helper.setupAndMakeOffer(
+                collectionAddress,
+                nftId,
+                offerPrice,
+                durationInDays
+            );
+
+            const durationInSeconds = durationInDays * ONE_DAY_IN_SECONDS;
+            const BLOCK_MINED_BEFORE_NEXT_TRANSACTION = 1;
+            await time.increase(
+                durationInSeconds - BLOCK_MINED_BEFORE_NEXT_TRANSACTION
+            );
+
+            await expect(
+                marketplace.makeCounteroffer(
+                    collectionAddress,
+                    nftId,
+                    offerId,
+                    counterofferPrice
+                )
+            ).to.be.not.reverted;
         });
 
         it("should revert if the NFT is not being sold by the sender", async () => {
