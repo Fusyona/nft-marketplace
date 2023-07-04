@@ -1766,7 +1766,7 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.not.reverted;
         });
 
-        it("should emit CanceledOffer event", async () => {
+        it("should emit CancelledOffer event", async () => {
             await expect(
                 marketplace.cancelOffer(
                     collectionAddress,
@@ -1774,7 +1774,7 @@ describe("Testing Marketplace Smart Contract", () => {
                     indexOfOfferMapping
                 )
             )
-                .to.emit(await marketplace.getContract(), "CanceledOffer")
+                .to.emit(await marketplace.getContract(), "CancelledOffer")
                 .withArgs(
                     collectionAddress,
                     nftId,
@@ -1784,7 +1784,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 );
         });
 
-        it("should revert if buyer try to cancel an offer that was already canceled", async () => {
+        it("should revert if buyer try to cancel an offer that was already cancelled", async () => {
             await marketplace.cancelOffer(
                 collectionAddress,
                 nftId,
@@ -1796,10 +1796,10 @@ describe("Testing Marketplace Smart Contract", () => {
                     nftId,
                     indexOfOfferMapping
                 )
-            ).to.be.revertedWith("Marketplace: Offer already was canceled");
+            ).to.be.revertedWith("Marketplace: Offer already was cancelled");
         });
 
-        it("When an offer is canceled, the money that collateralize it, it's go out from the Marketplace Contract.", async () => {
+        it("When an offer is cancelled, the money that collateralize it, it's go out from the Marketplace Contract.", async () => {
             await marketplace.cancelOffer(
                 collectionAddress,
                 nftId,
