@@ -94,11 +94,13 @@ class Marketplace {
         indexOfOfferMapping: BigNumber | number
     ) {
         const contract = await this.getContract();
-        return await contract.cancelOffer(
+        const tx = await contract.cancelOffer(
             collectionAddress,
             nftId,
             indexOfOfferMapping
         );
+        await tx.wait(this.confirmations);
+        return tx;
     }
 
     async getOffer(

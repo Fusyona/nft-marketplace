@@ -84,7 +84,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 indexed nftId,
         uint256 newPrice
     );
-    event CanceledOffer(
+    event CancelledOffer(
         address indexed collection,
         uint256 indexed tokenId,
         uint256 indexOfOfferMapping,
@@ -109,7 +109,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 moneyToRebase = offer.price;
         address buyer = offer.buyer;
         payable(buyer).transfer(moneyToRebase);
-        emit CanceledOffer(
+        emit CancelledOffer(
             collection,
             tokenId,
             indexOfOfferMapping,
@@ -132,7 +132,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             indexOfOfferMapping
         ];
         require(msg.sender == offer.buyer, "Marketplace: Wrong Buyer");
-        require(offer.isInitialized, "Marketplace: Offer already was canceled");
+        require(offer.isInitialized, "Marketplace: Offer already was cancelled");
     }
 
     function withdraw() external override onlyOwner {

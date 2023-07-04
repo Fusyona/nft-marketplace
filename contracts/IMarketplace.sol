@@ -42,7 +42,7 @@ interface IMarketplace {
     ) external;
 
     function cancelOffer(
-        address collectiom,
+        address collection,
         uint256 tokenId,
         uint256 indexOfOfferMapping
     ) external;
