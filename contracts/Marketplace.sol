@@ -167,24 +167,25 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 indexOfOfferMapping
     ) external override {
         NFTForSale storage nft = nftsListed[collection][tokenId];
-        Offer memory targetOffer = nft.offers[indexOfOfferMapping];
-        _takeOfferRequirements(nft, targetOffer, indexOfOfferMapping);
+        Offer storage offer = nft.offers[indexOfOfferMapping];
+        _takeOfferRequirements(nft, offer, indexOfOfferMapping);
         address seller = nft.seller;
-        address buyer = targetOffer.buyer;
-        uint256 price = targetOffer.price;
+        address buyer = offer.buyer;
+        uint256 price = offer.price;
         nft.listed = false;
+        offer.isInitialized = false;
         _trade(buyer, seller, collection, tokenId, price);
     }
 
     function _takeOfferRequirements(
         NFTForSale storage nft,
-        Offer memory targetOffer,
+        Offer memory offer,
         uint256 indexOfOfferMapping
     ) private view {
         address seller = nft.seller;
         bool listed = nft.listed;
         uint256 totalOffers = nft.totalOffers;
-        uint64 expirationDate = targetOffer.expirationDate;
+        uint64 expirationDate = offer.expirationDate;
         require(
             msg.sender == seller,
             "Marketplace: Sender should be the seller"
@@ -194,6 +195,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             totalOffers > indexOfOfferMapping,
             "Marketplace: Offer doesn't exist"
         );
+        require(offer.isInitialized, "Marketplace: Offer was used");
         require(
             expirationDate >= block.timestamp,
             "Marketplace: Offer expired"
