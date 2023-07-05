@@ -132,7 +132,10 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             indexOfOfferMapping
         ];
         require(msg.sender == offer.buyer, "Marketplace: Wrong Buyer");
-        require(offer.isInitialized, "Marketplace: Offer already was cancelled");
+        require(
+            offer.isInitialized,
+            "Marketplace: Offer already was cancelled"
+        );
     }
 
     function withdraw() external override onlyOwner {

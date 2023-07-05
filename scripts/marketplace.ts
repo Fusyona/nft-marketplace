@@ -174,10 +174,7 @@ class Marketplace {
         return tx;
     }
 
-    async offersOf(
-        collectionAddress: Address,
-        nftId: number | BigNumber
-    ) {
+    async offersOf(collectionAddress: Address, nftId: number | BigNumber) {
         try {
             const dataNFT = await this.getDataNFT(collectionAddress, nftId);
             return dataNFT.totalOffers;

@@ -94,7 +94,6 @@ describe("Testing Marketplace Smart Contract", () => {
             offerPrice: BigNumber | number = 90,
             durationInDays = 3
         ) {
-            
             await tSafeTransferFrom(signer, this.seller.address, nftId);
             await approveAndListingByASeller(
                 this.seller,
@@ -116,7 +115,7 @@ describe("Testing Marketplace Smart Contract", () => {
     async function tSafeTransferFrom(
         signer: Signer,
         to: string,
-        nftid: number | BigNumber 
+        nftid: number | BigNumber
     ) {
         try {
             await (
@@ -171,12 +170,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
 
             await tApprove(marketplace, seller);
-            await tList(
-                marketplace,
-                collectionAddress,
-                nftId,
-                price
-            );
+            await tList(marketplace, collectionAddress, nftId, price);
         } catch (error) {
             throw error;
         }
@@ -241,12 +235,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 nftId1,
                 price
             );
-            await tList(
-                marketplace,
-                collectionAddress,
-                nftId2,
-                price
-            );
+            await tList(marketplace, collectionAddress, nftId2, price);
 
             const tvlAfterList = await marketplace.totalOfNFTListed();
             const _tvlAfterList = BN.from(tvlAfterList).toNumber();
@@ -1798,11 +1787,23 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("reverts if the offer was took and the buyer try to cancel it", async () => {
-            marketplace = new Marketplace(marketplaceDeployment.address, seller);
-            await marketplace.takeOffer(collectionAddress, nftId, BN.from(indexOfOfferMapping));
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
+            await marketplace.takeOffer(
+                collectionAddress,
+                nftId,
+                BN.from(indexOfOfferMapping)
+            );
             marketplace = new Marketplace(marketplaceDeployment.address, buyer);
-            await expect(marketplace.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)).
-            to.be.revertedWith("Marketplace: Offer already was cancelled");
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer already was cancelled");
         });
 
         it("When an offer is cancelled, the money that collateralize it, it's go out from the Marketplace Contract.", async () => {
@@ -1819,6 +1820,5 @@ describe("Testing Marketplace Smart Contract", () => {
                 expectedMarketplaceBalance
             );
         });
-
     });
 });
