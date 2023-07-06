@@ -41,10 +41,10 @@ interface IMarketplace {
         uint256 indexOfOfferMapping
     ) external;
 
+    function setFloorRatioFromPercentage(uint8 percentage) external;
     /**
     function cancelOffer(address collectiom, uint256 tokenId) external;
 
-    function setMinOfferPrice(uint256 value) external;
     
     function setFeeRatio(int128 value) external;
     
