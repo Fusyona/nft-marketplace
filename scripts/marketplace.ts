@@ -282,6 +282,18 @@ class Marketplace {
         const contract = await this.getContract();
         return await contract.nftsListed(collectionAddress, nftId);
     }
+
+    async setFloorRatioFromPercentage(percentage: number) {
+        const contract = await this.getContract();
+        const tx = await contract.setFloorRatioFromPercentage(percentage);
+        await tx.wait(this.confirmations);
+        return tx;
+    }
+
+    async floorRatio() {
+        const contract = await this.getContract();
+        return await contract.floorRatio();
+    }
 }
 
 export { Marketplace };
