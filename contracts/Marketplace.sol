@@ -84,12 +84,61 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 indexed nftId,
         uint256 newPrice
     );
+    event CancelledOffer(
+        address indexed collection,
+        uint256 indexed tokenId,
+        uint256 indexOfOfferMapping,
+        uint256 priceOffer,
+        address indexed buyer
+    );
 
     constructor() {}
 
     receive() external payable {}
 
-    function withdraw() external onlyOwner {
+    function cancelOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external override {
+        _cancelOfferRequirements(collection, tokenId, indexOfOfferMapping);
+        Offer storage offer = nftsListed[collection][tokenId].offers[
+            indexOfOfferMapping
+        ];
+        offer.isInitialized = false;
+        uint256 moneyToRebase = offer.price;
+        address buyer = offer.buyer;
+        payable(buyer).transfer(moneyToRebase);
+        emit CancelledOffer(
+            collection,
+            tokenId,
+            indexOfOfferMapping,
+            moneyToRebase,
+            buyer
+        );
+    }
+
+    function _cancelOfferRequirements(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) private view {
+        NFTForSale storage nft = nftsListed[collection][tokenId];
+        require(
+            nft.totalOffers > indexOfOfferMapping,
+            "Marketplace: Offer not found"
+        );
+        Offer memory offer = nftsListed[collection][tokenId].offers[
+            indexOfOfferMapping
+        ];
+        require(msg.sender == offer.buyer, "Marketplace: Wrong Buyer");
+        require(
+            offer.isInitialized,
+            "Marketplace: Offer already was cancelled"
+        );
+    }
+
+    function withdraw() external override onlyOwner {
         require(
             fusyBenefitsAccumulated > 0,
             "Marketplace: Nothing to withdraw."
@@ -102,7 +151,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
 
     function setFeeRatio(
         int128 _percentageMultipliedBy2Up64AndTwoDecimals
-    ) external onlyOwner {
+    ) external override onlyOwner {
         require(
             _percentageMultipliedBy2Up64AndTwoDecimals._verifyFeeRatioBounds()
         );
@@ -121,24 +170,25 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 indexOfOfferMapping
     ) external override {
         NFTForSale storage nft = nftsListed[collection][tokenId];
-        Offer memory targetOffer = nft.offers[indexOfOfferMapping];
-        _takeOfferRequirements(nft, targetOffer, indexOfOfferMapping);
+        Offer storage offer = nft.offers[indexOfOfferMapping];
+        _takeOfferRequirements(nft, offer, indexOfOfferMapping);
         address seller = nft.seller;
-        address buyer = targetOffer.buyer;
-        uint256 price = targetOffer.price;
+        address buyer = offer.buyer;
+        uint256 price = offer.price;
         nft.listed = false;
+        offer.isInitialized = false;
         _trade(buyer, seller, collection, tokenId, price);
     }
 
     function _takeOfferRequirements(
         NFTForSale storage nft,
-        Offer memory targetOffer,
+        Offer memory offer,
         uint256 indexOfOfferMapping
     ) private view {
         address seller = nft.seller;
         bool listed = nft.listed;
         uint256 totalOffers = nft.totalOffers;
-        uint64 expirationDate = targetOffer.expirationDate;
+        uint64 expirationDate = offer.expirationDate;
         require(
             msg.sender == seller,
             "Marketplace: Sender should be the seller"
@@ -148,6 +198,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             totalOffers > indexOfOfferMapping,
             "Marketplace: Offer doesn't exist"
         );
+        require(offer.isInitialized, "Marketplace: Offer was used");
         require(
             expirationDate >= block.timestamp,
             "Marketplace: Offer expired"
@@ -224,16 +275,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         );
         nft.listed = false;
         _transferRemainingToSender(moneyReceived, moneyRequired);
-        _payingBenefits(seller, moneyRequired);
-        IERC1155 ierc1155 = IERC1155(collection);
-        ierc1155.safeTransferFrom(
-            address(this),
-            msg.sender,
-            nftId,
-            ONE_COPY,
-            ""
-        );
-        emit NFTSold(msg.sender, seller, collection, nftId, nft.price);
+        _trade(msg.sender, seller, collection, nftId, moneyRequired);
     }
 
     function _purchaseRequirements(
@@ -400,7 +442,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 nftId,
         uint256 offerId
     ) external view returns (Counteroffer memory) {
-        Offer memory offer = _getOffer(collection, nftId, offerId);
+        Offer memory offer = getOffer(collection, nftId, offerId);
         return _getCounterOfferById(offer.counterofferId);
     }
 
@@ -410,11 +452,11 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         return counteroffers[id - 1];
     }
 
-    function _getOffer(
+    function getOffer(
         address collection,
         uint256 nftId,
         uint256 offerId
-    ) private view returns (Offer memory) {
+    ) public view returns (Offer memory) {
         return nftsListed[collection][nftId].offers[offerId];
     }
 
@@ -473,7 +515,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 nftId = counteroffer.nftId;
         uint256 offerId = counteroffer.offerId;
 
-        return _getOffer(collection, nftId, offerId);
+        return getOffer(collection, nftId, offerId);
     }
 
     function _transferNftToSender(address collection, uint256 nftId) private {

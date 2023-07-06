@@ -41,16 +41,17 @@ interface IMarketplace {
         uint256 indexOfOfferMapping
     ) external;
 
+    function cancelOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external;
+
+    function setFeeRatio(
+        int128 _percentageMultipliedBy2Up64AndTwoDecimals
+    ) external;
+
+    function withdraw() external;
+
     function setFloorRatioFromPercentage(uint8 percentage) external;
-    /**
-    function cancelOffer(address collectiom, uint256 tokenId) external;
-
-    
-    function setFeeRatio(int128 value) external;
-    
-    function withdrawBenefits() external;
-
-      
-     * 
-     */
 }

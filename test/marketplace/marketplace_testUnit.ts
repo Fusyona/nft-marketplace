@@ -59,7 +59,7 @@ describe("Testing Marketplace Smart Contract", () => {
     async function tMakeOffer(
         marketplace: Marketplace,
         collectionAddress: Address,
-        nftId: string,
+        nftId: number | BigNumber,
         priceOffer: BigNumber,
         durationInDays: number
     ) {
@@ -94,17 +94,16 @@ describe("Testing Marketplace Smart Contract", () => {
             offerPrice: BigNumber | number = 90,
             durationInDays = 3
         ) {
-            const nftIdStr = nftId.toString();
-            await tSafeTransferFrom(signer, this.seller.address, nftIdStr);
+            await tSafeTransferFrom(signer, this.seller.address, nftId);
             await approveAndListingByASeller(
                 this.seller,
                 collectionAddress,
-                nftIdStr,
+                nftId,
                 this.nftPrice
             );
             await this.buyerMarketplace.makeOffer(
                 collectionAddress,
-                nftIdStr,
+                nftId,
                 offerPrice,
                 durationInDays
             );
@@ -116,7 +115,7 @@ describe("Testing Marketplace Smart Contract", () => {
     async function tSafeTransferFrom(
         signer: Signer,
         to: string,
-        nftid: string
+        nftid: number | BigNumber
     ) {
         try {
             await (
@@ -144,13 +143,13 @@ describe("Testing Marketplace Smart Contract", () => {
     async function tList(
         marketplace: Marketplace,
         collectionAddress: Address,
-        nftId: string,
-        price: string
+        nftId: number | BigNumber,
+        price: BigNumber
     ) {
         await marketplace.list(collectionAddress, nftId, price);
     }
 
-    async function tBalanceOf(account: Address, nftId: string) {
+    async function tBalanceOf(account: Address, nftId: number | BigNumber) {
         try {
             return await (await mockCollection()).balanceOf(account, nftId);
         } catch (error) {
@@ -161,7 +160,7 @@ describe("Testing Marketplace Smart Contract", () => {
     async function approveAndListingByASeller(
         seller: Signer,
         collectionAddress: Address,
-        nftId: string,
+        nftId: number | BigNumber,
         price: BigNumber
     ) {
         try {
@@ -171,12 +170,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
 
             await tApprove(marketplace, seller);
-            await tList(
-                marketplace,
-                collectionAddress,
-                nftId,
-                price.toString()
-            );
+            await tList(marketplace, collectionAddress, nftId, price);
         } catch (error) {
             throw error;
         }
@@ -203,7 +197,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const _tvlBeforeList = BN.from(tvlBeforeList).toNumber();
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -231,8 +225,8 @@ describe("Testing Marketplace Smart Contract", () => {
             const _tvlBeforeList = BN.from(tvlBeforeList).toNumber();
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId1 = "1";
-            const nftId2 = "2";
+            const nftId1 = 1;
+            const nftId2 = 2;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -241,12 +235,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 nftId1,
                 price
             );
-            await tList(
-                marketplace,
-                collectionAddress,
-                nftId2,
-                price.toString()
-            );
+            await tList(marketplace, collectionAddress, nftId2, price);
 
             const tvlAfterList = await marketplace.totalOfNFTListed();
             const _tvlAfterList = BN.from(tvlAfterList).toNumber();
@@ -260,7 +249,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("An exception should revert if an user try to list twice the same NFT.", async () => {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId1 = "1";
+            const nftId1 = 1;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -274,7 +263,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 signer
             );
             expect(
-                tList(marketplace, collectionAddress, nftId1, price.toString())
+                tList(marketplace, collectionAddress, nftId1, price)
             ).to.be.revertedWith("Marketplace: Error when listed");
         });
 
@@ -284,11 +273,11 @@ describe("Testing Marketplace Smart Contract", () => {
                 signer
             );
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId1 = "1";
+            const nftId1 = 1;
             const price = ethers.utils.parseEther("1");
 
             expect(
-                tList(marketplace, collectionAddress, nftId1, price.toString())
+                tList(marketplace, collectionAddress, nftId1, price)
             ).to.be.revertedWith(
                 "ERC1155: caller is not token owner or approved"
             );
@@ -297,7 +286,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
     describe("Buy function's tests", () => {
         it("If one NFT is bought then the totalOfNFT listed should decrease in less one.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
@@ -329,7 +318,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("After the purchase the Marketplace's ether balance should be equal to 2%NFTprice.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
 
@@ -364,7 +353,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("After the purchase the Seller's ether balance should increase in NFTprice - 2%NFTprice.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const _2percentPrice = _2percent.mul(price).div(twoUp64);
@@ -402,7 +391,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("Buyer's NFT balance previously to the purchase should be equal to 0.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
@@ -427,7 +416,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("Buyer's NFT balance after the purchase should increase in one.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
@@ -457,7 +446,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("If the buyer haven't enough money to purchase the NFT at its price, the transacton should revert.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("10000.1");
 
             const collectionAddress = mockERC1155CollectionDeployment.address;
@@ -487,7 +476,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 marketplaceDeployment.address,
                 buyer
             );
-            const nftId = "1";
+            const nftId = 1;
 
             const wrappedBuy = async () => {
                 await marketplace.buy(collectionAddress, nftId);
@@ -500,7 +489,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("After unlisted a NFT it's not possible make the same purchase, avoiding double spent.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
 
@@ -537,7 +526,7 @@ describe("Testing Marketplace Smart Contract", () => {
     describe("MakeOffer function's tests. ", () => {
         it("A user can make an offer over a NFT that it already was listed.", async () => {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -573,7 +562,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("Balance of Marketplace should increase in price offer.", async () => {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -610,7 +599,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("After a buyer make an offer, he hasn't the NFT's ownership yet.", async () => {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -653,7 +642,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("The transaction should reverts if the price offer is less than minPriceOffer", async () => {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
 
             await approveAndListingByASeller(
@@ -688,7 +677,7 @@ describe("Testing Marketplace Smart Contract", () => {
                 marketplaceDeployment.address,
                 buyer
             );
-            const nftId = "1";
+            const nftId = 1;
             const priceOffer = ethers.utils.parseEther("0.9");
             const durationInDays = 3;
 
@@ -742,7 +731,7 @@ describe("Testing Marketplace Smart Contract", () => {
             try {
                 const collectionAddress =
                     mockERC1155CollectionDeployment.address;
-                const nftId = "1";
+                const nftId = 1;
                 const price = ethers.utils.parseEther("1");
                 const seller = await getAnotherSigner(1);
                 await tSafeTransferFrom(signer, seller.address, nftId);
@@ -785,7 +774,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
         it("After trade an NFT should be possible for the Marketplace's owner withdraw the fusyBenefitsAccumulated.", async () => {
             const collectionAddress = mockERC1155CollectionDeployment.address;
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const seller = await getAnotherSigner(1);
 
@@ -832,7 +821,7 @@ describe("Testing Marketplace Smart Contract", () => {
             const seller2 = await getAnotherSigner(3);
             const buyer1 = await getAnotherSigner(2);
             const buyer2 = await getAnotherSigner(4);
-            const nftIds = ["1", "2"];
+            const nftIds = [1, 2];
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             await tSafeTransferFrom(signer, seller1.address, nftIds[0]);
@@ -882,7 +871,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("After withdraw the fusyBenefitsAccumulated, it should down to 0 value.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
 
@@ -1206,13 +1195,12 @@ describe("Testing Marketplace Smart Contract", () => {
 
         it("should make 2 counteroffers and set the ID of the 2nd to 2", async () => {
             const nftId = 1;
-            const nftIdStr = nftId.toString();
 
-            await tSafeTransferFrom(signer, seller.address, nftIdStr);
+            await tSafeTransferFrom(signer, seller.address, nftId);
             await approveAndListingByASeller(
                 seller,
                 collectionAddress,
-                nftIdStr,
+                nftId,
                 nftPrice
             );
 
@@ -1448,13 +1436,12 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             collectionAddress = mockERC1155CollectionDeployment.address;
 
-            const nftIdStr = nftId.toString();
-            await tSafeTransferFrom(signer, seller.address, nftIdStr);
+            await tSafeTransferFrom(signer, seller.address, nftId);
 
             await approveAndListingByASeller(
                 seller,
                 collectionAddress,
-                nftIdStr,
+                nftId,
                 nftPrice
             );
         });
@@ -1528,7 +1515,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
     describe("TakeOffer function's tests", () => {
         it("reverts if expirationDate is less than the current time.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
 
@@ -1555,7 +1542,7 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.revertedWith("Marketplace: Offer expired");
         });
         it("reverts if signer of is not the seller", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const indexOfOfferMapping = BN.from(0);
@@ -1579,7 +1566,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("reverts if the indexOfOfferMapping is greater than totalOffers", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             const indexOfOfferMapping = BN.from(3);
@@ -1617,7 +1604,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
         async function presetRequirementsForThreeExpirationDays(
             collectionAddress: Address,
-            nftId: string,
+            nftId: number | BigNumber,
             price: BigNumber
         ) {
             await approveAndListingByASeller(
@@ -1645,7 +1632,7 @@ describe("Testing Marketplace Smart Contract", () => {
         }
 
         it("reverts, if you try to fetch a NFT's data that was bought through a takeOffer.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             await presetRequirementsForThreeExpirationDays(
@@ -1673,7 +1660,7 @@ describe("Testing Marketplace Smart Contract", () => {
         });
 
         it("A seller can accept an offer if its expiration date is not reached yet.", async () => {
-            const nftId = "1";
+            const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
             await presetRequirementsForThreeExpirationDays(
@@ -1745,6 +1732,145 @@ describe("Testing Marketplace Smart Contract", () => {
             const EXPECTED_NEW_FLOOR_RATIO = toABDKMath64x64(NEW_PERCENTAGE);
             expect(await marketplace.floorRatio()).to.be.equal(
                 EXPECTED_NEW_FLOOR_RATIO
+            );
+        });
+    });
+
+    describe("CancelOffer function's tests", () => {
+        let seller: SignerWithAddress;
+        let buyer: SignerWithAddress;
+        let imNotTheBuyer: SignerWithAddress;
+        let marketplace: Marketplace;
+        let collectionAddress: Address;
+        let indexOfOfferMapping: number;
+        const nftId = 1;
+        const nftPrice = ethers.utils.parseEther("10");
+        const newPrice = ethers.utils.parseEther("9");
+
+        beforeEach(async () => {
+            indexOfOfferMapping = 0;
+            seller = await getAnotherSigner(1);
+            buyer = await getAnotherSigner(2);
+            imNotTheBuyer = await getAnotherSigner(3);
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            collectionAddress = mockERC1155CollectionDeployment.address;
+            await tSafeTransferFrom(signer, seller.address, nftId);
+
+            await approveAndListingByASeller(
+                seller,
+                collectionAddress,
+                nftId,
+                nftPrice
+            );
+            await tMakeOffer(
+                marketplace,
+                collectionAddress,
+                nftId,
+                newPrice,
+                3
+            );
+        });
+
+        it("should revert if the sender is not the buyer (offer's owner)", async () => {
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                imNotTheBuyer
+            );
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Wrong Buyer");
+        });
+
+        it("should revert if offer id doesn't exist.", async () => {
+            indexOfOfferMapping = 1;
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer not found");
+        });
+
+        it("should not revert when the offer's owner (buyer) cancel the offer", async () => {
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.not.reverted;
+        });
+
+        it("should emit CancelledOffer event", async () => {
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            )
+                .to.emit(await marketplace.getContract(), "CancelledOffer")
+                .withArgs(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping,
+                    newPrice,
+                    buyer.address
+                );
+        });
+
+        it("should revert if buyer try to cancel an offer that was already cancelled", async () => {
+            await marketplace.cancelOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            );
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer already was cancelled");
+        });
+
+        it("reverts if the offer was taken and the buyer try to cancel it", async () => {
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                seller
+            );
+            await marketplace.takeOffer(
+                collectionAddress,
+                nftId,
+                BN.from(indexOfOfferMapping)
+            );
+            marketplace = new Marketplace(marketplaceDeployment.address, buyer);
+            await expect(
+                marketplace.cancelOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer already was cancelled");
+        });
+
+        it("When an offer is cancelled, the money that collateralize it, it's go out from the Marketplace Contract.", async () => {
+            await marketplace.cancelOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            );
+            const expectedMarketplaceBalance = 0;
+            const actualMarketplaceBalance = await ethers.provider.getBalance(
+                marketplaceDeployment.address
+            );
+            expect(actualMarketplaceBalance).to.be.eq(
+                expectedMarketplaceBalance
             );
         });
     });
