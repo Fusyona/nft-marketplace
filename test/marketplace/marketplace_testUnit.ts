@@ -1786,7 +1786,7 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.revertedWith("Marketplace: Offer already was cancelled");
         });
 
-        it("reverts if the offer was took and the buyer try to cancel it", async () => {
+        it("reverts if the offer was taken and the buyer try to cancel it", async () => {
             marketplace = new Marketplace(
                 marketplaceDeployment.address,
                 seller
