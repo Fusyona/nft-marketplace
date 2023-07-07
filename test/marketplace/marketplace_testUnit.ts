@@ -6,7 +6,7 @@ import { Address, Deployment } from "hardhat-deploy/types";
 import { ERC1155, MockERC1155Collection } from "../../typechain-types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import exp from "constants";
+import { toABDKMath64x64 } from "../utils";
 
 describe("Testing Marketplace Smart Contract", () => {
     let signer: Signer;
@@ -1680,6 +1680,59 @@ describe("Testing Marketplace Smart Contract", () => {
                     indexOfOfferMapping
                 )
             ).to.be.not.reverted;
+        });
+    });
+
+    describe("SetFloorRatio function tests", () => {
+        let marketplace: Marketplace;
+
+        beforeEach(async () => {
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+        });
+
+        it("should revert if sender is not the owner", async () => {
+            const notTheOwner = await getAnotherSigner(3);
+            const marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                notTheOwner
+            );
+
+            await expect(
+                marketplace.setFloorRatioFromPercentage(1)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("should revert if new percentage is greater than 100", async () => {
+            await expect(
+                marketplace.setFloorRatioFromPercentage(101)
+            ).to.be.revertedWith(
+                "Marketplace: Percentage must be less or equal than 100"
+            );
+        });
+
+        it("should revert if new percentage is the same as the current one", async () => {
+            const CURRENT_PERCENTAGE = 20;
+
+            await expect(
+                marketplace.setFloorRatioFromPercentage(CURRENT_PERCENTAGE)
+            ).to.be.revertedWith(
+                "Marketplace: New percentage is the same as the current one"
+            );
+        });
+
+        it("should change value of floorRatio", async () => {
+            const NEW_PERCENTAGE = 30;
+            await expect(
+                marketplace.setFloorRatioFromPercentage(NEW_PERCENTAGE)
+            ).to.be.not.reverted;
+
+            const EXPECTED_NEW_FLOOR_RATIO = toABDKMath64x64(NEW_PERCENTAGE);
+            expect(await marketplace.floorRatio()).to.be.equal(
+                EXPECTED_NEW_FLOOR_RATIO
+            );
         });
     });
 

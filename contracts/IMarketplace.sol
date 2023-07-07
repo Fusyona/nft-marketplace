@@ -53,8 +53,5 @@ interface IMarketplace {
 
     function withdraw() external;
 
-    /**
-    function setMinOfferPrice(uint256 value) external;
-     * 
-     */
+    function setFloorRatioFromPercentage(uint8 percentage) external;
 }

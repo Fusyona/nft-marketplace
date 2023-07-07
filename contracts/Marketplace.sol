@@ -556,4 +556,19 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
             "Marketplace: New price is the same as current price"
         );
     }
+
+    function setFloorRatioFromPercentage(uint8 percentage) external onlyOwner {
+        require(
+            percentage <= 100,
+            "Marketplace: Percentage must be less or equal than 100"
+        );
+
+        int128 newFloorRatio = MathFees._npercent(int128(uint128(percentage)));
+        require(
+            newFloorRatio != floorRatio,
+            "Marketplace: New percentage is the same as the current one"
+        );
+
+        floorRatio = newFloorRatio;
+    }
 }
