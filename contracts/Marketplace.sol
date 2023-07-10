@@ -20,22 +20,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 totalOffers;
     }
 
-    struct Offer {
-        bool isInitialized;
-        address buyer;
-        uint256 price;
-        uint64 expirationDate;
-        uint256 counterofferId;
-    }
-
-    struct Counteroffer {
-        address collection;
-        uint256 nftId;
-        uint256 offerId;
-        uint256 price;
-        uint64 expirationDate;
-    }
-
     int128 public feeRatio = MathFees._npercent(int128(2));
     int128 public floorRatio = MathFees._npercent(int128(20));
 
@@ -45,7 +29,8 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
 
     uint256 public fusyBenefitsAccumulated;
 
-    mapping(address => mapping(uint256 => NFTForSale)) public nftsListed;
+    mapping(address => mapping(uint256 => NFTForSale)) internal nftsListed;
+
     Counteroffer[] counteroffers;
 
     event NFTListed(
@@ -570,5 +555,19 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         );
 
         floorRatio = newFloorRatio;
+    }
+
+    function getNftInfo(
+        address collection,
+        uint256 tokenId
+    ) external view returns (NftInfo memory) {
+        NFTForSale storage nft = nftsListed[collection][tokenId];
+        return
+            NftInfo({
+                listed: nft.listed,
+                price: nft.price,
+                seller: nft.seller,
+                totalOffers: nft.totalOffers
+            });
     }
 }

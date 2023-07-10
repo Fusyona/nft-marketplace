@@ -7,12 +7,15 @@ import {
     BigNumber,
     ContractTransaction,
 } from "ethers";
-import { Marketplace as MarketplaceContract } from "../typechain-types";
+import {
+    IMarketplace,
+    Marketplace as MarketplaceContract,
+} from "../typechain-types";
 
 class Marketplace {
     contractAddress: Address;
     signer: Signer;
-    private contractSingleton: MarketplaceContract | undefined = undefined;
+    private contractSingleton: IMarketplace | undefined = undefined;
 
     constructor(
         contractAddress: Address,
@@ -66,7 +69,7 @@ class Marketplace {
     }
 
     async buy(collectionAddress: Address, nftId: number | BigNumber) {
-        const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+        const dataNFT = await this.getNftInfo(collectionAddress, nftId);
         const tx = await (
             await this.getContract()
         ).buy(collectionAddress, nftId, { value: dataNFT.price });
@@ -176,27 +179,9 @@ class Marketplace {
 
     async offersOf(collectionAddress: Address, nftId: number | BigNumber) {
         try {
-            const dataNFT = await this.getDataNFT(collectionAddress, nftId);
+            const dataNFT = await this.getNftInfo(collectionAddress, nftId);
             return dataNFT.totalOffers;
         } catch (error: any) {
-            throw error;
-        }
-    }
-
-    async getDataNFT(collectionAddress: Address, nftId: number | BigNumber) {
-        try {
-            const dataNFT = await (
-                await this.getContract()
-            ).nftsListed(collectionAddress, nftId);
-            if (dataNFT.listed === false) {
-                throw new Error("NFT has not been listed yet");
-            } else {
-                return dataNFT;
-            }
-        } catch (error: any) {
-            if ("message" in error) {
-                throw error.message;
-            }
             throw error;
         }
     }
@@ -215,7 +200,7 @@ class Marketplace {
         return events;
     }
 
-    async getContract(): Promise<MarketplaceContract> {
+    async getContract(): Promise<IMarketplace> {
         if (typeof this.contractSingleton === "undefined") {
             this.contractSingleton = await this.tryGetContract();
         }
@@ -309,9 +294,9 @@ class Marketplace {
         return await contract.changePriceOf(collectionAddress, nftId, newPrice);
     }
 
-    async nftsListed(collectionAddress: Address, nftId: BigNumber | number) {
+    async getNftInfo(collectionAddress: Address, nftId: BigNumber | number) {
         const contract = await this.getContract();
-        return await contract.nftsListed(collectionAddress, nftId);
+        return await contract.getNftInfo(collectionAddress, nftId);
     }
 
     async setFloorRatioFromPercentage(percentage: number) {
