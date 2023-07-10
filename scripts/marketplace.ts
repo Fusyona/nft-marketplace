@@ -26,8 +26,26 @@ export default class Marketplace {
         this.signer = signer;
     }
 
-    async fusyBenefitsAccumulated() {
-        return await this.onContract((c) => c.fusyBenefitsAccumulated());
+    async list(
+        collectionAddress: Address,
+        nftId: number | BigNumber,
+        price: BigNumber | number
+    ) {
+        return await this.waitAndReturn((c) =>
+            c.list(collectionAddress, nftId, price)
+        );
+    }
+
+    private async waitAndReturn(
+        contractTransactionFunction: (
+            contract: IMarketplace
+        ) => Promise<ContractTransaction>
+    ) {
+        const transaction = await this.onContract((c) =>
+            contractTransactionFunction(c)
+        );
+        await transaction.wait(this.confirmations);
+        return transaction;
     }
 
     private async onContract<TResult>(
@@ -52,6 +70,12 @@ export default class Marketplace {
         )) as MarketplaceContract;
     }
 
+    async isListed(collectionAddress: string, nftId: BigNumber | number) {
+        return await this.onContract((c) =>
+            c.isListed(collectionAddress, nftId)
+        );
+    }
+
     async totalOfNFTListed(): Promise<number> {
         const allNFTListedEventEmitted = await this.getEvents("NFTListed");
         const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
@@ -67,29 +91,19 @@ export default class Marketplace {
         return await this.onContract((c: Contract) => c.queryFilter(eventName));
     }
 
-    async withdraw() {
-        return await this.waitAndReturn((c) => c.withdraw());
-    }
-
-    private async waitAndReturn(
-        contractTransactionFunction: (
-            contract: IMarketplace
-        ) => Promise<ContractTransaction>
-    ) {
-        const transaction = await this.onContract((c) =>
-            contractTransactionFunction(c)
+    async getNftInfo(collectionAddress: Address, nftId: BigNumber | number) {
+        return await this.onContract((c) =>
+            c.getNftInfo(collectionAddress, nftId)
         );
-        await transaction.wait(this.confirmations);
-        return transaction;
     }
 
-    async list(
+    async changePriceOf(
         collectionAddress: Address,
-        nftId: number | BigNumber,
-        price: BigNumber | number
+        nftId: BigNumber | number,
+        newPrice: BigNumber | number
     ) {
-        return await this.waitAndReturn((c) =>
-            c.list(collectionAddress, nftId, price)
+        return await this.onContract((c) =>
+            c.changePriceOf(collectionAddress, nftId, newPrice)
         );
     }
 
@@ -97,26 +111,6 @@ export default class Marketplace {
         const nft = await this.getNftInfo(collectionAddress, nftId);
         return await this.waitAndReturn((c) =>
             c.buy(collectionAddress, nftId, { value: nft.price })
-        );
-    }
-
-    async cancelOffer(
-        collectionAddress: Address,
-        nftId: number | BigNumber,
-        indexOfOfferMapping: BigNumber | number
-    ) {
-        return await this.waitAndReturn((c) =>
-            c.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)
-        );
-    }
-
-    async getOffer(
-        collectionAddress: Address,
-        nftId: BigNumber | number,
-        indexOfOfferMapping: BigNumber | number
-    ) {
-        return await this.onContract((c) =>
-            c.getOffer(collectionAddress, nftId, indexOfOfferMapping)
         );
     }
 
@@ -159,6 +153,41 @@ export default class Marketplace {
             await makeOfferTransaction.wait(this.confirmations);
         });
         return offerId;
+    }
+
+    async getOffer(
+        collectionAddress: Address,
+        nftId: BigNumber | number,
+        indexOfOfferMapping: BigNumber | number
+    ) {
+        return await this.onContract((c) =>
+            c.getOffer(collectionAddress, nftId, indexOfOfferMapping)
+        );
+    }
+
+    async offersOf(collectionAddress: Address, nftId: number | BigNumber) {
+        const nft = await this.getNftInfo(collectionAddress, nftId);
+        return nft.totalOffers;
+    }
+
+    async cancelOffer(
+        collectionAddress: Address,
+        nftId: number | BigNumber,
+        indexOfOfferMapping: BigNumber | number
+    ) {
+        return await this.waitAndReturn((c) =>
+            c.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)
+        );
+    }
+
+    async takeOffer(
+        collectionAddress: Address,
+        nftId: number | BigNumber,
+        indexOfOfferMapping: number | BigNumber
+    ) {
+        return await this.waitAndReturn((c) =>
+            c.takeOffer(collectionAddress, nftId, indexOfOfferMapping)
+        );
     }
 
     async makeCounteroffer(
@@ -215,29 +244,6 @@ export default class Marketplace {
         return counterofferId;
     }
 
-    async takeOffer(
-        collectionAddress: Address,
-        nftId: number | BigNumber,
-        indexOfOfferMapping: number | BigNumber
-    ) {
-        return await this.waitAndReturn((c) =>
-            c.takeOffer(collectionAddress, nftId, indexOfOfferMapping)
-        );
-    }
-
-    async offersOf(collectionAddress: Address, nftId: number | BigNumber) {
-        const nft = await this.getNftInfo(collectionAddress, nftId);
-        return nft.totalOffers;
-    }
-
-    plotUri(receipt: Receipt) {
-        return this.uriScanner(receipt.transactionHash);
-    }
-
-    uriScanner(txHash: string) {
-        return `https://mumbai.polygonscan.com/tx/${txHash}`;
-    }
-
     async getCounteroffer(
         collectionAddress: string,
         nftId: BigNumber | number,
@@ -257,30 +263,12 @@ export default class Marketplace {
         );
     }
 
-    async isListed(collectionAddress: string, nftId: BigNumber | number) {
-        return await this.onContract((c) =>
-            c.isListed(collectionAddress, nftId)
-        );
-    }
-
     async getFusyonaFeeFor(ethersValue: BigNumber | number) {
         return await this.onContract((c) => c.getFusyonaFeeFor(ethersValue));
     }
 
-    async changePriceOf(
-        collectionAddress: Address,
-        nftId: BigNumber | number,
-        newPrice: BigNumber | number
-    ) {
-        return await this.onContract((c) =>
-            c.changePriceOf(collectionAddress, nftId, newPrice)
-        );
-    }
-
-    async getNftInfo(collectionAddress: Address, nftId: BigNumber | number) {
-        return await this.onContract((c) =>
-            c.getNftInfo(collectionAddress, nftId)
-        );
+    async withdraw() {
+        return await this.waitAndReturn((c) => c.withdraw());
     }
 
     async setFloorRatioFromPercentage(percentage: number) {
@@ -291,5 +279,17 @@ export default class Marketplace {
 
     async floorRatio() {
         return await this.onContract((c) => c.floorRatio());
+    }
+
+    async fusyBenefitsAccumulated() {
+        return await this.onContract((c) => c.fusyBenefitsAccumulated());
+    }
+
+    plotUri(receipt: Receipt) {
+        return this.uriScanner(receipt.transactionHash);
+    }
+
+    uriScanner(txHash: string) {
+        return `https://mumbai.polygonscan.com/tx/${txHash}`;
     }
 }

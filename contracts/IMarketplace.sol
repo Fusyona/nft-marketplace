@@ -4,6 +4,11 @@ pragma solidity ^0.8.0;
 interface IMarketplace {
     function list(address collection, uint256 tokenId, uint256 price) external;
 
+    function isListed(
+        address collection,
+        uint256 tokenId
+    ) external view returns (bool);
+
     function getNftInfo(
         address collection,
         uint256 tokenId
@@ -15,6 +20,12 @@ interface IMarketplace {
         address seller;
         uint256 totalOffers;
     }
+
+    function changePriceOf(
+        address collection,
+        uint256 tokenId,
+        uint256 newPrice
+    ) external;
 
     function buy(address collection, uint256 tokenId) external payable;
 
@@ -37,6 +48,18 @@ interface IMarketplace {
         uint64 expirationDate;
         uint256 counterofferId;
     }
+
+    function cancelOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external;
+
+    function takeOffer(
+        address collection,
+        uint256 tokenId,
+        uint256 indexOfOfferMapping
+    ) external;
 
     function makeCounteroffer(
         address collection,
@@ -62,30 +85,7 @@ interface IMarketplace {
 
     function takeCounteroffer(uint256 id) external payable;
 
-    function isListed(
-        address collection,
-        uint256 tokenId
-    ) external view returns (bool);
-
     function getFusyonaFeeFor(uint256 price) external view returns (uint256);
-
-    function changePriceOf(
-        address collection,
-        uint256 tokenId,
-        uint256 newPrice
-    ) external;
-
-    function takeOffer(
-        address collection,
-        uint256 tokenId,
-        uint256 indexOfOfferMapping
-    ) external;
-
-    function cancelOffer(
-        address collection,
-        uint256 tokenId,
-        uint256 indexOfOfferMapping
-    ) external;
 
     function setFeeRatio(
         int128 _percentageMultipliedBy2Up64AndTwoDecimals
@@ -95,7 +95,7 @@ interface IMarketplace {
 
     function setFloorRatioFromPercentage(uint8 percentage) external;
 
-    function fusyBenefitsAccumulated() external view returns (uint256);
-
     function floorRatio() external view returns (int128);
+
+    function fusyBenefitsAccumulated() external view returns (uint256);
 }
