@@ -1,6 +1,6 @@
 import { deployments, ethers } from "hardhat";
 import { assert, expect } from "chai";
-import { Marketplace } from "../../scripts/marketplace";
+import Marketplace from "../../scripts/marketplace";
 import { Signer, BigNumber } from "ethers";
 import { Address, Deployment } from "hardhat-deploy/types";
 import { ERC1155, MockERC1155Collection } from "../../typechain-types";
@@ -1198,18 +1198,20 @@ describe("Testing Marketplace Smart Contract", () => {
             nftId: BigNumber | number,
             offerPrice: number
         ) {
-            const offerId = await marketplace.makeOfferAndGetId(
+            const { offerId } = await marketplace.makeOfferAndGetId(
                 collectionAddress,
                 nftId,
                 offerPrice,
                 3
             );
-            return await marketplace.makeCounterofferAndGetId(
-                collectionAddress,
-                nftId,
-                offerId,
-                offerPrice + 1
-            );
+            const { counterofferId } =
+                await marketplace.makeCounterofferAndGetId(
+                    collectionAddress,
+                    nftId,
+                    offerId,
+                    offerPrice + 1
+                );
+            return counterofferId;
         }
     });
 
