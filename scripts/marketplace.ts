@@ -41,9 +41,7 @@ export default class Marketplace {
             contract: IMarketplace
         ) => Promise<ContractTransaction>
     ) {
-        const transaction = await this.onContract((c) =>
-            contractTransactionFunction(c)
-        );
+        const transaction = await this.onContract(contractTransactionFunction);
         await transaction.wait(this.confirmations);
         return transaction;
     }
@@ -55,7 +53,7 @@ export default class Marketplace {
         return await contractFunction(contract);
     }
 
-    async getContract(): Promise<IMarketplace> {
+    async getContract() {
         if (typeof this.contractSingleton === "undefined") {
             this.contractSingleton = await this.newContractInstance();
         }
@@ -76,7 +74,7 @@ export default class Marketplace {
         );
     }
 
-    async totalOfNFTListed(): Promise<number> {
+    async totalOfNFTListed() {
         const allNFTListedEventEmitted = await this.getEvents("NFTListed");
         const allNFTSoldEventEmitted = await this.getEvents("NFTSold");
         const nftsListed = allNFTListedEventEmitted.length;
@@ -87,7 +85,7 @@ export default class Marketplace {
         return nftsListed - nftsSold;
     }
 
-    private async getEvents(eventName: string): Promise<Event[]> {
+    private async getEvents(eventName: string) {
         return await this.onContract((c: Contract) => c.queryFilter(eventName));
     }
 
