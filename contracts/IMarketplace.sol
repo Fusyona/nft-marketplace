@@ -87,9 +87,9 @@ interface IMarketplace {
 
     function getFusyonaFeeFor(uint256 price) external view returns (uint256);
 
-    function setFeeRatio(
-        int128 _percentageMultipliedBy2Up64AndTwoDecimals
-    ) external;
+    function setFeeRatioFromPercentage(uint8 percentage) external;
+
+    function feeRatio() external view returns (int128);
 
     function withdraw() external;
 

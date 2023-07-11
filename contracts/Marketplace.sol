@@ -134,19 +134,19 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         emit RootWithdrawal(owner(), amountToWithdraw);
     }
 
-    function setFeeRatio(
-        int128 _percentageMultipliedBy2Up64AndTwoDecimals
+    function setFeeRatioFromPercentage(
+        uint8 percentage
     ) external override onlyOwner {
         require(
-            _percentageMultipliedBy2Up64AndTwoDecimals._verifyFeeRatioBounds()
+            percentage <= 100,
+            "Marketplace: Percentage must be less or equal than 100"
         );
-        int128 _feeRatio = _percentageMultipliedBy2Up64AndTwoDecimals
-            ._computeFeeRatio();
+        int128 newFeeRatio = MathFees._npercent(int128(uint128(percentage)));
         require(
-            feeRatio != _feeRatio,
-            "Marketplace: You are trying to set the same feeRatio."
+            feeRatio != newFeeRatio,
+            "Marketplace: New percentage is the same as the current one"
         );
-        feeRatio = _feeRatio;
+        feeRatio = newFeeRatio;
     }
 
     function takeOffer(
