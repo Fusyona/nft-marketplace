@@ -1,11 +1,11 @@
-import { deployments, ethers } from "hardhat";
-import { assert, expect } from "chai";
-import Marketplace from "../../scripts/marketplace";
-import { Signer, BigNumber } from "ethers";
-import { Address, Deployment } from "hardhat-deploy/types";
-import { ERC1155, MockERC1155Collection } from "../../typechain-types";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { assert, expect } from "chai";
+import { BigNumber, Signer } from "ethers";
+import { deployments, ethers } from "hardhat";
+import { Address, Deployment } from "hardhat-deploy/types";
+import Marketplace from "../../scripts/marketplace";
+import { ERC1155, MockERC1155Collection } from "../../typechain-types";
 import { toABDKMath64x64 } from "../utils";
 
 describe("Testing Marketplace Smart Contract", () => {
@@ -1850,6 +1850,58 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             expect(actualMarketplaceBalance).to.be.eq(
                 expectedMarketplaceBalance
+            );
+        });
+    });
+
+    describe("SetFeeRatioFromPercentage function tests", () => {
+        let marketplace: Marketplace;
+
+        beforeEach(async () => {
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+        });
+
+        it("should revert if sender is not the owner", async () => {
+            const notTheOwner = await getAnotherSigner(3);
+            const marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                notTheOwner
+            );
+
+            await expect(
+                marketplace.setFeeRatioFromPercentage(1)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("should revert if new percentage is greater than 100", async () => {
+            await expect(
+                marketplace.setFeeRatioFromPercentage(101)
+            ).to.be.revertedWith(
+                "Marketplace: Percentage must be less or equal than 100"
+            );
+        });
+
+        it("should revert if new percentage is the same as the current one", async () => {
+            const CURRENT_PERCENTAGE = 2;
+
+            await expect(
+                marketplace.setFeeRatioFromPercentage(CURRENT_PERCENTAGE)
+            ).to.be.revertedWith(
+                "Marketplace: New percentage is the same as the current one"
+            );
+        });
+
+        it("should change value of feeRatio", async () => {
+            const NEW_PERCENTAGE = 30;
+            await expect(marketplace.setFeeRatioFromPercentage(NEW_PERCENTAGE))
+                .to.be.not.reverted;
+
+            const EXPECTED_NEW_FEE_RATIO = toABDKMath64x64(NEW_PERCENTAGE);
+            expect(await marketplace.feeRatio()).to.be.equal(
+                EXPECTED_NEW_FEE_RATIO
             );
         });
     });
