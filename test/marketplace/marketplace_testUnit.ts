@@ -174,6 +174,19 @@ describe("Testing Marketplace Smart Contract", () => {
     });
 
     describe("List functions's tests.", () => {
+        let marketplace: Marketplace;
+        let collectionAddress: Address;
+        const nftId1 = 1;
+        const price = ethers.utils.parseEther("1");
+
+        beforeEach(async () => {
+            marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            collectionAddress = mockERC1155CollectionDeployment.address;
+        });
+
         it("A NFT should be listed using list function.", async () => {
             const marketplace = new Marketplace(
                 marketplaceDeployment.address,
@@ -251,7 +264,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             expect(
                 tList(marketplace, collectionAddress, nftId1, price)
-            ).to.be.revertedWith("Marketplace: Error when listed");
+            ).to.be.revertedWith("Marketplace: NFT already listed");
         });
 
         it("If an user owner of a NFT try to list that nft before it grants to Marketplace rigths over its token, then an exception should be thrown.", async () => {
@@ -268,6 +281,25 @@ describe("Testing Marketplace Smart Contract", () => {
             ).to.be.revertedWith(
                 "ERC1155: caller is not token owner or approved"
             );
+        });
+
+        it("should revert if sender doesn't own the NFT", async () => {
+            const notTheOwner = await getAnotherSigner(3);
+            const notTheOwnerApi = new Marketplace(
+                marketplaceDeployment.address,
+                notTheOwner
+            );
+
+            await expect(
+                tList(notTheOwnerApi, collectionAddress, nftId1, price)
+            ).to.be.revertedWith("Marketplace: You don't own the NFT");
+        });
+
+        it("should revert if price is 0", async () => {
+            const price = BN.from(0);
+            await expect(
+                tList(marketplace, collectionAddress, nftId1, price)
+            ).to.be.revertedWith("Marketplace: Price must be greater than 0");
         });
     });
 
@@ -467,7 +499,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
             await expect(
                 marketplace.buy(collectionAddress, nftId)
-            ).to.be.revertedWith("Marketplace: Error in the purchase.");
+            ).to.be.revertedWith("Marketplace: NFT not listed");
         });
 
         it("After unlisted a NFT it's not possible make the same purchase, avoiding double spent.", async () => {
@@ -497,7 +529,33 @@ describe("Testing Marketplace Smart Contract", () => {
 
             await expect(
                 marketplace.buy(collectionAddress, nftId)
-            ).to.be.revertedWith("Marketplace: Error in the purchase.");
+            ).to.be.revertedWith("Marketplace: NFT not listed");
+        });
+
+        it("should revert if the sent amount is not enough", async () => {
+            const nftId = 1;
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+
+            await approveAndListingByASeller(
+                signer,
+                collectionAddress,
+                nftId,
+                price
+            );
+            const buyer = await getAnotherSigner(1);
+
+            let marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                buyer
+            );
+            const contract = await marketplace.getContract();
+            const notEnoughAmount = price.sub(1);
+            await expect(
+                contract.buy(collectionAddress, nftId, {
+                    value: notEnoughAmount,
+                })
+            ).to.be.revertedWith("Marketplace: Sent amount not enough");
         });
     });
 
@@ -645,7 +703,10 @@ describe("Testing Marketplace Smart Contract", () => {
                     priceOffer,
                     durationInDays
                 )
-            ).to.be.revertedWith("Marketplace: Error trying to make an offer.");
+            ).to.be.revertedWith(
+                "Marketplace: Price must be greater or equal than " +
+                    "the minimum offer price for that NFT (call minPriceOffer())"
+            );
         });
 
         it("The transaction should reverts if a buyer try to make an offer over an unlisted NFT.", async () => {
@@ -667,7 +728,7 @@ describe("Testing Marketplace Smart Contract", () => {
                     priceOffer,
                     durationInDays
                 )
-            ).to.be.revertedWith("Marketplace: Error trying to make an offer.");
+            ).to.be.revertedWith("Marketplace: NFT not listed");
         });
     });
 
