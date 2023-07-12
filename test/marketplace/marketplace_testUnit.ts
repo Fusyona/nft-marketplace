@@ -1,6 +1,6 @@
 import { deployments, ethers } from "hardhat";
 import { assert, expect } from "chai";
-import { Marketplace } from "../../scripts/marketplace";
+import Marketplace from "../../scripts/marketplace";
 import { Signer, BigNumber } from "ethers";
 import { Address, Deployment } from "hardhat-deploy/types";
 import { ERC1155, MockERC1155Collection } from "../../typechain-types";
@@ -22,19 +22,6 @@ describe("Testing Marketplace Smart Contract", () => {
         await setInstances();
         await defaultSigner();
     });
-
-    async function expectPromiseToFailWithMessage(
-        fn: Function,
-        messageToCatch: string
-    ) {
-        try {
-            await fn();
-        } catch (error: any) {
-            const message =
-                "Expected promise to fail with the specified error message";
-            expect(messageToCatch, message).to.be.equal(error);
-        }
-    }
 
     async function defaultSigner() {
         const signers = await ethers.getSigners();
@@ -478,14 +465,9 @@ describe("Testing Marketplace Smart Contract", () => {
             );
             const nftId = 1;
 
-            const wrappedBuy = async () => {
-                await marketplace.buy(collectionAddress, nftId);
-            };
-
-            await expectPromiseToFailWithMessage(
-                wrappedBuy,
-                "NFT has not been listed yet"
-            );
+            await expect(
+                marketplace.buy(collectionAddress, nftId)
+            ).to.be.revertedWith("Marketplace: Error in the purchase.");
         });
 
         it("After unlisted a NFT it's not possible make the same purchase, avoiding double spent.", async () => {
@@ -512,14 +494,10 @@ describe("Testing Marketplace Smart Contract", () => {
                 marketplaceDeployment.address,
                 scammer
             );
-            const wrappedBuy = async () => {
-                await marketplace.buy(collectionAddress, nftId);
-            };
 
-            await expectPromiseToFailWithMessage(
-                wrappedBuy,
-                "NFT has not been listed yet"
-            );
+            await expect(
+                marketplace.buy(collectionAddress, nftId)
+            ).to.be.revertedWith("Marketplace: Error in the purchase.");
         });
     });
 
@@ -1220,18 +1198,20 @@ describe("Testing Marketplace Smart Contract", () => {
             nftId: BigNumber | number,
             offerPrice: number
         ) {
-            const offerId = await marketplace.makeOfferAndGetId(
+            const { offerId } = await marketplace.makeOfferAndGetId(
                 collectionAddress,
                 nftId,
                 offerPrice,
                 3
             );
-            return await marketplace.makeCounterofferAndGetId(
-                collectionAddress,
-                nftId,
-                offerId,
-                offerPrice + 1
-            );
+            const { counterofferId } =
+                await marketplace.makeCounterofferAndGetId(
+                    collectionAddress,
+                    nftId,
+                    offerId,
+                    offerPrice + 1
+                );
+            return counterofferId;
         }
     });
 
@@ -1497,7 +1477,7 @@ describe("Testing Marketplace Smart Contract", () => {
         it("should change price of NFT", async () => {
             await marketplace.changePriceOf(collectionAddress, nftId, newPrice);
 
-            const nftInfo = await marketplace.nftsListed(
+            const nftInfo = await marketplace.getNftInfo(
                 collectionAddress,
                 nftId
             );
@@ -1631,7 +1611,7 @@ describe("Testing Marketplace Smart Contract", () => {
             );
         }
 
-        it("reverts, if you try to fetch a NFT's data that was bought through a takeOffer.", async () => {
+        it("should unlist the NFT", async () => {
             const nftId = 1;
             const price = ethers.utils.parseEther("1");
             const collectionAddress = mockERC1155CollectionDeployment.address;
@@ -1650,13 +1630,12 @@ describe("Testing Marketplace Smart Contract", () => {
                 nftId,
                 indexOfOfferMapping
             );
-            const wrappedGetDataNFT = async () => {
-                await marketplace.getDataNFT(collectionAddress, nftId);
-            };
-            await expectPromiseToFailWithMessage(
-                wrappedGetDataNFT,
-                "NFT has not been listed yet"
+
+            const nftInfo = await marketplace.getNftInfo(
+                collectionAddress,
+                nftId
             );
+            expect(nftInfo.listed).to.be.false;
         });
 
         it("A seller can accept an offer if its expiration date is not reached yet.", async () => {
