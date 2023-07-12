@@ -1,12 +1,6 @@
 import { ethers } from "hardhat";
 import { Address, Receipt } from "hardhat-deploy/types";
-import {
-    Event,
-    Contract,
-    Signer,
-    BigNumber,
-    ContractTransaction,
-} from "ethers";
+import { Contract, Signer, BigNumber, ContractTransaction } from "ethers";
 import {
     IMarketplace,
     Marketplace as MarketplaceContract,
@@ -263,6 +257,16 @@ export default class Marketplace {
 
     async getFusyonaFeeFor(ethersValue: BigNumber | number) {
         return await this.onContract((c) => c.getFusyonaFeeFor(ethersValue));
+    }
+
+    async setFeeRatioFromPercentage(percentage: number) {
+        return await this.waitAndReturn((c) =>
+            c.setFeeRatioFromPercentage(percentage)
+        );
+    }
+
+    async feeRatio() {
+        return await this.onContract((c) => c.feeRatio());
     }
 
     async withdraw() {
