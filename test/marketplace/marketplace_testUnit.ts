@@ -1660,6 +1660,72 @@ describe("Testing Marketplace Smart Contract", () => {
                 )
             ).to.be.not.reverted;
         });
+
+        it("should revert if the NFT was bought", async () => {
+            const nftId = 1;
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            await presetRequirementsForThreeExpirationDays(
+                collectionAddress,
+                nftId,
+                price
+            );
+
+            const buyer = await getAnotherSigner(1);
+            const buyerApi = new Marketplace(
+                marketplaceDeployment.address,
+                buyer
+            );
+            await buyerApi.buy(collectionAddress, nftId);
+
+            const marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            const indexOfOfferMapping = BN.from(0);
+            await expect(
+                marketplace.takeOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: NFT not found");
+        });
+
+        it("should revert if offer was canceled", async () => {
+            const nftId = 1;
+            const price = ethers.utils.parseEther("1");
+            const collectionAddress = mockERC1155CollectionDeployment.address;
+            await presetRequirementsForThreeExpirationDays(
+                collectionAddress,
+                nftId,
+                price
+            );
+
+            const indexOfOfferMapping = BN.from(0);
+            const offerer = await getAnotherSigner(1);
+            const offererApi = new Marketplace(
+                marketplaceDeployment.address,
+                offerer
+            );
+            await offererApi.cancelOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            );
+
+            const marketplace = new Marketplace(
+                marketplaceDeployment.address,
+                signer
+            );
+            await expect(
+                marketplace.takeOffer(
+                    collectionAddress,
+                    nftId,
+                    indexOfOfferMapping
+                )
+            ).to.be.revertedWith("Marketplace: Offer was used");
+        });
     });
 
     describe("SetFloorRatio function tests", () => {
