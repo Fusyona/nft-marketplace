@@ -172,8 +172,8 @@ describe("Testing Marketplace Smart Contract", () => {
         const builder = new MarketplaceBuilder();
         MarketplaceDirector.hardhatConfig(builder);
         return builder
-            .usingContractAddress(marketplaceDeployment.address)
-            .usingSignerIndex(signerIndex)
+            .withContractAddress(marketplaceDeployment.address)
+            .withSignerIndex(signerIndex)
             .build();
     }
 

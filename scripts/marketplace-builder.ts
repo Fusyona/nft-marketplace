@@ -8,27 +8,27 @@ export default class MarketplaceBuilder {
     private signerIndex = 0;
     confirmations: number | undefined;
 
-    usingContractAddress(contractAddress: string) {
+    withContractAddress(contractAddress: string) {
         this.contractAddress = contractAddress;
         return this;
     }
 
-    usingContractAbi(contractAbi: any) {
+    withContractAbi(contractAbi: any) {
         this.contractAbi = contractAbi;
         return this;
     }
 
-    usingWeb3(web3: Web3) {
+    withWeb3(web3: Web3) {
         this.web3 = web3;
         return this;
     }
 
-    usingSignerIndex(signerIndex: number) {
+    withSignerIndex(signerIndex: number) {
         this.signerIndex = signerIndex;
         return this;
     }
 
-    usingConfirmations(confirmations: number) {
+    withConfirmations(confirmations: number) {
         this.confirmations = confirmations;
         return this;
     }

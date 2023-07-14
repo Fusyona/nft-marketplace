@@ -8,7 +8,7 @@ const {
 export default class MarketplaceDirector {
     static hardhatConfig(builder: MarketplaceBuilder) {
         builder
-            .usingWeb3(web3 as unknown as Web3)
-            .usingContractAbi(IMARKETPLACE_ABI);
+            .withWeb3(web3 as unknown as Web3)
+            .withContractAbi(IMARKETPLACE_ABI);
     }
 }
