@@ -209,10 +209,8 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint64 durationInDays
     ) external payable override {
         uint256 priceOffer = msg.value;
-        require(
-            _makeOfferRequirements(collection, nftId, priceOffer),
-            "Marketplace: Error trying to make an offer."
-        );
+        _makeOfferRequirements(collection, nftId, priceOffer);
+
         address buyer = msg.sender;
         Offer memory offer = Offer({
             isInitialized: true,
@@ -234,10 +232,12 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         address collection,
         uint256 nftId,
         uint256 priceOffer
-    ) private view returns (bool) {
-        return
-            isListed(collection, nftId) &&
-            priceOffer >= minPriceOffer(collection, nftId);
+    ) private view {
+        require(
+            priceOffer >= minPriceOffer(collection, nftId),
+            "Marketplace: Price must be greater or equal than the minimum offer price for that NFT (call minPriceOffer())"
+        );
+        require(isListed(collection, nftId), "Marketplace: NFT not listed");
     }
 
     function minPriceOffer(
@@ -254,10 +254,9 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         address seller = nft.seller;
         uint256 moneyReceived = msg.value;
         uint256 moneyRequired = nft.price;
-        require(
-            _purchaseRequirements(nft, moneyReceived, moneyRequired),
-            "Marketplace: Error in the purchase."
-        );
+
+        _purchaseRequirements(nft, moneyReceived, moneyRequired);
+
         nft.listed = false;
         _transferRemainingToSender(moneyReceived, moneyRequired);
         _trade(msg.sender, seller, collection, nftId, moneyRequired);
@@ -267,8 +266,12 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         NFTForSale storage nft,
         uint256 moneyReceived,
         uint256 moneyRequired
-    ) private view returns (bool) {
-        return nft.listed && (moneyReceived >= moneyRequired);
+    ) private view {
+        require(nft.listed, "Marketplace: NFT not listed");
+        require(
+            moneyReceived >= moneyRequired,
+            "Marketplace: Sent amount not enough"
+        );
     }
 
     function _transferRemainingToSender(
@@ -298,11 +301,9 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 nftId,
         uint256 price
     ) external override {
+        _listRequirements(collection, nftId, price);
+
         address seller = msg.sender;
-        require(
-            _listedRequirements(seller, collection, nftId, price),
-            "Marketplace: Error when listed"
-        );
         IERC1155 ierc1155 = IERC1155(collection);
         ierc1155.safeTransferFrom(seller, address(this), nftId, ONE_COPY, "");
         NFTForSale storage newNFTforListing = nftsListed[collection][nftId];
@@ -312,16 +313,20 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         emit NFTListed(seller, collection, nftId, price);
     }
 
-    function _listedRequirements(
-        address seller,
+    function _listRequirements(
         address collection,
         uint256 nftId,
         uint256 price
-    ) private view returns (bool) {
-        return
-            !isListed(collection, nftId) &&
-            _isTheOwner(seller, collection, nftId) &&
-            (price > 0);
+    ) private view {
+        require(
+            !isListed(collection, nftId),
+            "Marketplace: NFT already listed"
+        );
+        require(
+            _senderIsTheOwnerOfNft(collection, nftId),
+            "Marketplace: You don't own the NFT"
+        );
+        require(price > 0, "Marketplace: Price must be greater than 0");
     }
 
     function isListed(
@@ -332,13 +337,12 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         return nftTarget.listed;
     }
 
-    function _isTheOwner(
-        address seller,
+    function _senderIsTheOwnerOfNft(
         address collection,
         uint256 nftId
     ) private view returns (bool) {
         IERC1155 ierc1155 = IERC1155(collection);
-        return ierc1155.balanceOf(seller, nftId) > 0;
+        return ierc1155.balanceOf(msg.sender, nftId) > 0;
     }
 
     function makeCounteroffer(
