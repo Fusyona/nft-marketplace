@@ -3,7 +3,7 @@ import Marketplace from "./marketplace";
 
 export default class MarketplaceBuilder {
     private contractAddress: string | undefined;
-    private contrarctAbi: any;
+    private contractAbi: any;
     private web3: Web3 | undefined;
     private signerIndex = 0;
     confirmations: number | undefined;
@@ -14,7 +14,7 @@ export default class MarketplaceBuilder {
     }
 
     usingContractAbi(contractAbi: any) {
-        this.contrarctAbi = contractAbi;
+        this.contractAbi = contractAbi;
         return this;
     }
 
@@ -36,7 +36,7 @@ export default class MarketplaceBuilder {
     build() {
         return new Marketplace(
             this.contractAddress!,
-            this.contrarctAbi!,
+            this.contractAbi!,
             this.web3!,
             this.signerIndex,
             this.confirmations
