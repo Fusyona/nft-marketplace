@@ -4,6 +4,7 @@ artifacts
 cache
 typechain-types
 node_modules
+.pnpm-store/**
 
 #AUTOGENRATIVE FILES
 /coverage.json
