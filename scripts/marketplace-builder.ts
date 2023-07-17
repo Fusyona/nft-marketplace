@@ -34,6 +34,8 @@ export default class MarketplaceBuilder {
     }
 
     build() {
+        this.ensureMandatoryParameters();
+
         return new Marketplace(
             this.contractAddress!,
             this.contractAbi!,
@@ -41,5 +43,23 @@ export default class MarketplaceBuilder {
             this.signerIndex,
             this.confirmations
         );
+    }
+
+    private ensureMandatoryParameters() {
+        const mandatoryParameters = [
+            "contractAddress",
+            "contractAbi",
+            "provider",
+        ];
+        for (const parameter of mandatoryParameters) {
+            this.throwIfParameterUndefined(parameter);
+        }
+    }
+
+    private throwIfParameterUndefined(parameterKey: string) {
+        const indexedThis = this as Record<string, any>;
+        if (typeof indexedThis[parameterKey] === "undefined") {
+            throw new Error(`Missing mandatory parameter ${parameterKey}`);
+        }
     }
 }
