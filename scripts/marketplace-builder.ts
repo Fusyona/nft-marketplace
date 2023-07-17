@@ -1,12 +1,12 @@
-import Web3 from "web3";
 import Marketplace from "./marketplace";
+import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 
 export default class MarketplaceBuilder {
     private contractAddress: string | undefined;
     private contractAbi: any;
-    private web3: Web3 | undefined;
+    private provider: ExternalProvider | JsonRpcFetchFunc | undefined;
     private signerIndex = 0;
-    confirmations: number | undefined;
+    private confirmations: number | undefined;
 
     withContractAddress(contractAddress: string) {
         this.contractAddress = contractAddress;
@@ -18,8 +18,8 @@ export default class MarketplaceBuilder {
         return this;
     }
 
-    withWeb3(web3: Web3) {
-        this.web3 = web3;
+    withProvider(provider: ExternalProvider | JsonRpcFetchFunc) {
+        this.provider = provider;
         return this;
     }
 
@@ -37,7 +37,7 @@ export default class MarketplaceBuilder {
         return new Marketplace(
             this.contractAddress!,
             this.contractAbi!,
-            this.web3!,
+            this.provider!,
             this.signerIndex,
             this.confirmations
         );

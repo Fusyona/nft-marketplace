@@ -1,4 +1,3 @@
-import Web3 from "Web3";
 import {
     BigNumber,
     Contract,
@@ -7,6 +6,7 @@ import {
     providers,
 } from "ethers";
 import { IMarketplace } from "../typechain-types";
+import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 
 type Address = string;
 type NotUndefined = Exclude<any, undefined>;
@@ -17,13 +17,13 @@ export default class Marketplace {
     constructor(
         private contractAddress: Address,
         private contractAbi: NotUndefined,
-        web3: Web3,
+        provider: ExternalProvider | JsonRpcFetchFunc,
         signerIndex: number,
         private confirmations: number | undefined = undefined
     ) {
-        const signer = new providers.Web3Provider(
-            web3.currentProvider as any
-        ).getSigner(signerIndex);
+        const signer = new providers.Web3Provider(provider).getSigner(
+            signerIndex
+        );
 
         this.contract = new Contract(
             this.contractAddress,
