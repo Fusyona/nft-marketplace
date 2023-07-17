@@ -1,7 +1,7 @@
-import Marketplace from "./marketplace";
+import MarketplaceWrapperForOneSigner from "./marketplace-wrapper-for-one-signer";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 
-export default class MarketplaceBuilder {
+export default class MarketplaceWrapperForOneSigner_Builder {
     private contractAddress: string | undefined;
     private contractAbi: any;
     private provider: ExternalProvider | JsonRpcFetchFunc | undefined;
@@ -36,7 +36,7 @@ export default class MarketplaceBuilder {
     build() {
         this.ensureMandatoryParameters();
 
-        return new Marketplace(
+        return new MarketplaceWrapperForOneSigner(
             this.contractAddress!,
             this.contractAbi!,
             this.provider!,

@@ -11,7 +11,7 @@ import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 type Address = string;
 type NotUndefined = Exclude<any, undefined>;
 
-export default class Marketplace {
+export default class MarketplaceWrapperForOneSigner {
     contract: IMarketplace;
 
     constructor(

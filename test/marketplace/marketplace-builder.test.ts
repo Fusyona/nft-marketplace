@@ -1,10 +1,10 @@
 import { expect } from "chai";
-import MarketplaceBuilder from "../../scripts/marketplace-builder";
+import MarketplaceWrapperForOneSigner_Builder from "../../scripts/marketplace-wrapper-for-one-signer.builder";
 
 describe("Testing MarketplaceBuilder class", () => {
     it("should throw if contractAddress is undefined", () => {
         expect(() => {
-            new MarketplaceBuilder()
+            new MarketplaceWrapperForOneSigner_Builder()
                 .withContractAbi({})
                 .withProvider({})
                 .build();
@@ -13,7 +13,7 @@ describe("Testing MarketplaceBuilder class", () => {
 
     it("should throw if contractAbi is undefined", () => {
         expect(() => {
-            new MarketplaceBuilder()
+            new MarketplaceWrapperForOneSigner_Builder()
                 .withContractAddress("0x123")
                 .withProvider({})
                 .build();
@@ -22,7 +22,7 @@ describe("Testing MarketplaceBuilder class", () => {
 
     it("should throw if provider is undefined", () => {
         expect(() => {
-            new MarketplaceBuilder()
+            new MarketplaceWrapperForOneSigner_Builder()
                 .withContractAddress("0x123")
                 .withContractAbi({})
                 .build();
