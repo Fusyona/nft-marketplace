@@ -3,9 +3,9 @@ import { assert, expect } from "chai";
 import { BigNumber, Signer } from "ethers";
 import { deployments, ethers } from "hardhat";
 import { Address, Deployment } from "hardhat-deploy/types";
-import Marketplace from "../../scripts/marketplace";
-import MarketplaceBuilder from "../../scripts/marketplace-builder";
-import MarketplaceDirector from "../../scripts/marketplace-director";
+import MarketplaceWrapperForOneSigner from "../../scripts/marketplace-wrapper-for-one-signer";
+import MarketplaceWrapperForOneSigner_Builder from "../../scripts/marketplace-wrapper-for-one-signer.builder";
+import MarketplaceWrapperForOneSigner_Director from "../../scripts/marketplace-wrapper-for-one-signer.director";
 import { ERC1155, MockERC1155Collection } from "../../typechain-types";
 import { toABDKMath64x64 } from "../utils";
 
@@ -48,7 +48,7 @@ describe("Testing Marketplace Smart Contract", () => {
     }
 
     async function tMakeOffer(
-        marketplace: Marketplace,
+        marketplace: MarketplaceWrapperForOneSigner,
         collectionAddress: Address,
         nftId: number | BigNumber,
         priceOffer: BigNumber,
@@ -62,7 +62,10 @@ describe("Testing Marketplace Smart Contract", () => {
         );
     }
 
-    async function tApprove(marketplace: Marketplace, signer?: Signer) {
+    async function tApprove(
+        marketplace: MarketplaceWrapperForOneSigner,
+        signer?: Signer
+    ) {
         try {
             await (
                 await mockCollection(signer)
@@ -76,7 +79,7 @@ describe("Testing Marketplace Smart Contract", () => {
         constructor(
             private sellerSignerIndex: number,
             private nftPrice: BigNumber,
-            private buyerMarketplace: Marketplace
+            private buyerMarketplace: MarketplaceWrapperForOneSigner
         ) {}
 
         async setupAndMakeOffer(
@@ -133,7 +136,7 @@ describe("Testing Marketplace Smart Contract", () => {
     }
 
     async function tList(
-        marketplace: Marketplace,
+        marketplace: MarketplaceWrapperForOneSigner,
         collectionAddress: Address,
         nftId: number | BigNumber,
         price: BigNumber
@@ -169,8 +172,8 @@ describe("Testing Marketplace Smart Contract", () => {
     }
 
     function getMarketplaceFromSignerIndex(signerIndex: number) {
-        const builder = new MarketplaceBuilder();
-        MarketplaceDirector.hardhatConfig(builder);
+        const builder = new MarketplaceWrapperForOneSigner_Builder();
+        MarketplaceWrapperForOneSigner_Director.hardhatConfig(builder);
         return builder
             .withContractAddress(marketplaceDeployment.address)
             .withSignerIndex(signerIndex)
@@ -192,7 +195,7 @@ describe("Testing Marketplace Smart Contract", () => {
     });
 
     describe("List functions's tests.", () => {
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
         let collectionAddress: Address;
         const nftId1 = 1;
         const price = ethers.utils.parseEther("1");
@@ -286,7 +289,7 @@ describe("Testing Marketplace Smart Contract", () => {
     describe("Buy function's tests", () => {
         const BUYER_SIGNER_INDEX = 1;
         let buyer: SignerWithAddress;
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
 
         beforeEach(async () => {
             marketplace = getMarketplaceFromSignerIndex(BUYER_SIGNER_INDEX);
@@ -468,7 +471,7 @@ describe("Testing Marketplace Smart Contract", () => {
     describe("MakeOffer function's tests. ", () => {
         const BUYER_SIGNER_INDEX = 1;
         let buyer: Signer;
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
 
         beforeEach(async () => {
             marketplace = getMarketplaceFromSignerIndex(BUYER_SIGNER_INDEX);
@@ -607,7 +610,7 @@ describe("Testing Marketplace Smart Contract", () => {
     });
 
     describe("Escrow functions's tests", () => {
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
         beforeEach(async () => {
             marketplace = getMarketplaceForOwner();
         });
@@ -800,7 +803,7 @@ describe("Testing Marketplace Smart Contract", () => {
     describe("MakeCounteroffer function tests", () => {
         const SELLER_SIGNER_INDEX = 1;
         let seller: SignerWithAddress;
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
         const nftPrice = BN.from(100);
         const counterofferPrice = 91;
         let collectionAddress: Address;
@@ -1135,7 +1138,7 @@ describe("Testing Marketplace Smart Contract", () => {
         const SELLER_SIGNER_INDEX = 1;
         let seller: SignerWithAddress;
         let buyer: SignerWithAddress;
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
         let collectionAddress: Address;
         let helper: NftSaleHelper;
         const COUNTER_OFFER_DURATION_IN_DAYS = 3;
@@ -1317,7 +1320,7 @@ describe("Testing Marketplace Smart Contract", () => {
 
     describe("ChangePriceOf function tests", () => {
         let seller: SignerWithAddress;
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
         let collectionAddress: Address;
         const nftId = 1;
         const nftPrice = BN.from(100);
@@ -1406,7 +1409,7 @@ describe("Testing Marketplace Smart Contract", () => {
     });
 
     describe("TakeOffer function's tests", () => {
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
 
         beforeEach(async () => {
             marketplace = getMarketplaceForOwner();
@@ -1621,7 +1624,7 @@ describe("Testing Marketplace Smart Contract", () => {
     });
 
     describe("SetFloorRatio function tests", () => {
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
 
         beforeEach(async () => {
             marketplace = getMarketplaceForOwner();
@@ -1679,7 +1682,7 @@ describe("Testing Marketplace Smart Contract", () => {
         const NOT_THE_BUYER_SIGNER_INDEX = 3;
         let imNotTheBuyer: Signer;
 
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
         let collectionAddress: Address;
         let indexOfOfferMapping: number;
         const nftId = 1;
@@ -1815,7 +1818,7 @@ describe("Testing Marketplace Smart Contract", () => {
     });
 
     describe("SetFeeRatioFromPercentage function tests", () => {
-        let marketplace: Marketplace;
+        let marketplace: MarketplaceWrapperForOneSigner;
 
         beforeEach(async () => {
             marketplace = getMarketplaceForOwner();
