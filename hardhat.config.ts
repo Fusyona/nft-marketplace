@@ -5,6 +5,7 @@ import "hardhat-gas-reporter";
 import "@typechain/hardhat";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-waffle";
+import "@nomiclabs/hardhat-web3";
 
 const config: HardhatUserConfig = {
     solidity: "0.8.18",

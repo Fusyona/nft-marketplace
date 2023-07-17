@@ -33,50 +33,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
 
     Counteroffer[] counteroffers;
 
-    event NFTListed(
-        address indexed seller,
-        address indexed collection,
-        uint256 nftId,
-        uint256 price
-    );
-    event NFTSold(
-        address indexed buyer,
-        address indexed seller,
-        address indexed collection,
-        uint256 nftId,
-        uint256 price
-    );
-    event OfferMade(
-        address indexed buyer,
-        address indexed collection,
-        uint256 indexed nftId,
-        uint256 offerId
-    );
-    event CounterofferMade(
-        address indexed collection,
-        uint256 indexed nftId,
-        uint256 indexed offerId,
-        uint256 counterofferId
-    );
-    event CounterofferTaken(
-        uint256 indexed id,
-        uint256 price,
-        address indexed seller
-    );
-    event RootWithdrawal(address indexed beneficiary, uint256 amount);
-    event NFTPriceChanged(
-        address indexed collection,
-        uint256 indexed nftId,
-        uint256 newPrice
-    );
-    event CancelledOffer(
-        address indexed collection,
-        uint256 indexed tokenId,
-        uint256 indexOfOfferMapping,
-        uint256 priceOffer,
-        address indexed buyer
-    );
-
     constructor() {}
 
     receive() external payable {}

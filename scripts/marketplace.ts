@@ -1,23 +1,35 @@
-import { ethers } from "hardhat";
-import { Address, Receipt } from "hardhat-deploy/types";
-import { Contract, Signer, BigNumber, ContractTransaction } from "ethers";
+import Web3 from "Web3";
 import {
-    IMarketplace,
-    Marketplace as MarketplaceContract,
-} from "../typechain-types";
+    BigNumber,
+    Contract,
+    ContractReceipt,
+    ContractTransaction,
+    providers,
+} from "ethers";
+import { IMarketplace } from "../typechain-types";
+
+type Address = string;
+type NotUndefined = Exclude<any, undefined>;
 
 export default class Marketplace {
-    contractAddress: Address;
-    signer: Signer;
-    private contractSingleton: IMarketplace | undefined = undefined;
+    contract: IMarketplace;
 
     constructor(
-        contractAddress: Address,
-        signer: Signer,
+        private contractAddress: Address,
+        private contractAbi: NotUndefined,
+        web3: Web3,
+        signerIndex: number,
         private confirmations: number | undefined = undefined
     ) {
-        this.contractAddress = contractAddress;
-        this.signer = signer;
+        const signer = new providers.Web3Provider(
+            web3.currentProvider as any
+        ).getSigner(signerIndex);
+
+        this.contract = new Contract(
+            this.contractAddress,
+            this.contractAbi,
+            signer
+        ) as IMarketplace;
     }
 
     async list(
@@ -25,47 +37,21 @@ export default class Marketplace {
         nftId: number | BigNumber,
         price: BigNumber | number
     ) {
-        return await this.waitAndReturn((c) =>
-            c.list(collectionAddress, nftId, price)
+        return await this.waitAndReturn(
+            this.contract.list(collectionAddress, nftId, price)
         );
     }
 
     private async waitAndReturn(
-        contractTransactionFunction: (
-            contract: IMarketplace
-        ) => Promise<ContractTransaction>
+        transactionPromise: Promise<ContractTransaction>
     ) {
-        const transaction = await this.onContract(contractTransactionFunction);
+        const transaction = await transactionPromise;
         await transaction.wait(this.confirmations);
         return transaction;
     }
 
-    private async onContract<TResult>(
-        contractFunction: (contract: IMarketplace) => Promise<TResult>
-    ) {
-        const contract = await this.getContract();
-        return await contractFunction(contract);
-    }
-
-    async getContract() {
-        if (typeof this.contractSingleton === "undefined") {
-            this.contractSingleton = await this.newContractInstance();
-        }
-        return this.contractSingleton;
-    }
-
-    async newContractInstance() {
-        return (await ethers.getContractAt(
-            "Marketplace",
-            this.contractAddress,
-            this.signer
-        )) as MarketplaceContract;
-    }
-
     async isListed(collectionAddress: string, nftId: BigNumber | number) {
-        return await this.onContract((c) =>
-            c.isListed(collectionAddress, nftId)
-        );
+        return await this.contract.isListed(collectionAddress, nftId);
     }
 
     async totalOfNFTListed() {
@@ -80,13 +66,11 @@ export default class Marketplace {
     }
 
     private async getEvents(eventName: string) {
-        return await this.onContract((c: Contract) => c.queryFilter(eventName));
+        return await (this.contract as Contract).queryFilter(eventName);
     }
 
     async getNftInfo(collectionAddress: Address, nftId: BigNumber | number) {
-        return await this.onContract((c) =>
-            c.getNftInfo(collectionAddress, nftId)
-        );
+        return await this.contract.getNftInfo(collectionAddress, nftId);
     }
 
     async changePriceOf(
@@ -94,15 +78,17 @@ export default class Marketplace {
         nftId: BigNumber | number,
         newPrice: BigNumber | number
     ) {
-        return await this.onContract((c) =>
-            c.changePriceOf(collectionAddress, nftId, newPrice)
+        return await this.contract.changePriceOf(
+            collectionAddress,
+            nftId,
+            newPrice
         );
     }
 
     async buy(collectionAddress: Address, nftId: number | BigNumber) {
         const nft = await this.getNftInfo(collectionAddress, nftId);
-        return await this.waitAndReturn((c) =>
-            c.buy(collectionAddress, nftId, { value: nft.price })
+        return await this.waitAndReturn(
+            this.contract.buy(collectionAddress, nftId, { value: nft.price })
         );
     }
 
@@ -112,8 +98,8 @@ export default class Marketplace {
         offerPrice: number | BigNumber,
         durationInDays: number
     ) {
-        return await this.waitAndReturn((c) =>
-            c.makeOffer(collectionAddress, nftId, durationInDays, {
+        return await this.waitAndReturn(
+            this.contract.makeOffer(collectionAddress, nftId, durationInDays, {
                 value: offerPrice,
             })
         );
@@ -125,10 +111,13 @@ export default class Marketplace {
         offerPrice: number | BigNumber,
         durationInDays: number
     ) {
-        const offerTx = await this.onContract((c) =>
-            c.makeOffer(collectionAddress, nftId, durationInDays, {
+        const offerTx = await this.contract.makeOffer(
+            collectionAddress,
+            nftId,
+            durationInDays,
+            {
                 value: offerPrice,
-            })
+            }
         );
         const id = await this.getOfferIdFromTransaction(offerTx);
         return { offerId: id, transaction: offerTx };
@@ -137,9 +126,8 @@ export default class Marketplace {
     private async getOfferIdFromTransaction(
         makeOfferTransaction: ContractTransaction
     ) {
-        const contract = await this.getContract();
         const offerId: BigNumber = await new Promise(async (resolve) => {
-            contract.on("OfferMade", (_, __, ___, offerId: BigNumber) => {
+            this.contract.on("OfferMade", (_, __, ___, offerId: BigNumber) => {
                 resolve(offerId);
             });
             await makeOfferTransaction.wait(this.confirmations);
@@ -152,8 +140,10 @@ export default class Marketplace {
         nftId: BigNumber | number,
         indexOfOfferMapping: BigNumber | number
     ) {
-        return await this.onContract((c) =>
-            c.getOffer(collectionAddress, nftId, indexOfOfferMapping)
+        return await this.contract.getOffer(
+            collectionAddress,
+            nftId,
+            indexOfOfferMapping
         );
     }
 
@@ -167,8 +157,12 @@ export default class Marketplace {
         nftId: number | BigNumber,
         indexOfOfferMapping: BigNumber | number
     ) {
-        return await this.waitAndReturn((c) =>
-            c.cancelOffer(collectionAddress, nftId, indexOfOfferMapping)
+        return await this.waitAndReturn(
+            this.contract.cancelOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            )
         );
     }
 
@@ -177,8 +171,12 @@ export default class Marketplace {
         nftId: number | BigNumber,
         indexOfOfferMapping: number | BigNumber
     ) {
-        return await this.waitAndReturn((c) =>
-            c.takeOffer(collectionAddress, nftId, indexOfOfferMapping)
+        return await this.waitAndReturn(
+            this.contract.takeOffer(
+                collectionAddress,
+                nftId,
+                indexOfOfferMapping
+            )
         );
     }
 
@@ -189,8 +187,8 @@ export default class Marketplace {
         newPrice: BigNumber | number = 1,
         durationInDays: number = 3
     ) {
-        return await this.waitAndReturn((c) =>
-            c.makeCounteroffer(
+        return await this.waitAndReturn(
+            this.contract.makeCounteroffer(
                 collectionAddress,
                 nftId,
                 offerId,
@@ -207,14 +205,12 @@ export default class Marketplace {
         newPrice: BigNumber | number = 1,
         durationInDays: number = 3
     ) {
-        const counterofferTx = await this.onContract((c) =>
-            c.makeCounteroffer(
-                collectionAddress,
-                nftId,
-                offerId,
-                newPrice,
-                durationInDays
-            )
+        const counterofferTx = await this.contract.makeCounteroffer(
+            collectionAddress,
+            nftId,
+            offerId,
+            newPrice,
+            durationInDays
         );
         const id = await this.getCounterofferIdFromTransaction(counterofferTx);
         return { counterofferId: id, transaction: counterofferTx };
@@ -223,9 +219,8 @@ export default class Marketplace {
     async getCounterofferIdFromTransaction(
         makeCountreofferTransaction: ContractTransaction
     ) {
-        const contract = await this.getContract();
         const counterofferId: BigNumber = await new Promise(async (resolve) => {
-            contract.on(
+            this.contract.on(
                 "CounterofferMade",
                 (_, __, ___, counterofferId: BigNumber) => {
                     resolve(counterofferId);
@@ -241,8 +236,10 @@ export default class Marketplace {
         nftId: BigNumber | number,
         offerId: BigNumber | number
     ) {
-        return await this.onContract((c) =>
-            c.getCounteroffer(collectionAddress, nftId, offerId)
+        return await this.contract.getCounteroffer(
+            collectionAddress,
+            nftId,
+            offerId
         );
     }
 
@@ -250,44 +247,44 @@ export default class Marketplace {
         id: BigNumber | number,
         valueToSent: BigNumber | number = 0
     ) {
-        return await this.waitAndReturn((c) =>
-            c.takeCounteroffer(id, { value: valueToSent })
+        return await this.waitAndReturn(
+            this.contract.takeCounteroffer(id, { value: valueToSent })
         );
     }
 
     async getFusyonaFeeFor(ethersValue: BigNumber | number) {
-        return await this.onContract((c) => c.getFusyonaFeeFor(ethersValue));
+        return await this.contract.getFusyonaFeeFor(ethersValue);
     }
 
     async setFeeRatioFromPercentage(percentage: number) {
-        return await this.waitAndReturn((c) =>
-            c.setFeeRatioFromPercentage(percentage)
+        return await this.waitAndReturn(
+            this.contract.setFeeRatioFromPercentage(percentage)
         );
     }
 
     async feeRatio() {
-        return await this.onContract((c) => c.feeRatio());
+        return await this.contract.feeRatio();
     }
 
     async withdraw() {
-        return await this.waitAndReturn((c) => c.withdraw());
+        return await this.waitAndReturn(this.contract.withdraw());
     }
 
     async setFloorRatioFromPercentage(percentage: number) {
-        return await this.waitAndReturn((c) =>
-            c.setFloorRatioFromPercentage(percentage)
+        return await this.waitAndReturn(
+            this.contract.setFloorRatioFromPercentage(percentage)
         );
     }
 
     async floorRatio() {
-        return await this.onContract((c) => c.floorRatio());
+        return await this.contract.floorRatio();
     }
 
     async fusyBenefitsAccumulated() {
-        return await this.onContract((c) => c.fusyBenefitsAccumulated());
+        return await this.contract.fusyBenefitsAccumulated();
     }
 
-    plotUri(receipt: Receipt) {
+    plotUri(receipt: ContractReceipt) {
         return this.uriScanner(receipt.transactionHash);
     }
 
