@@ -6,14 +6,24 @@ import "@typechain/hardhat";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-web3";
+import dotenv from "dotenv";
+dotenv.config();
+
+const { PRIVATE_KEY, INFURA_API_KEY } = process.env;
 
 const config: HardhatUserConfig = {
     solidity: "0.8.18",
     namedAccounts: {
         deployer: 0,
     },
+    defaultNetwork: "hardhat",
     networks: {
         hardhat: {},
+        mumbai: {
+            chainId: 80001,
+            url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
+            accounts: [PRIVATE_KEY!],
+        },
     },
     gasReporter: {
         enabled: true,
