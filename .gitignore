@@ -9,8 +9,14 @@ node_modules
 #AUTOGENRATIVE FILES
 /coverage.json
 yarn-error.log
+/deployments/
 
 #OTHER FILES
 .prettierignore
 .solhintignore
 gas-report.txt
+/.env
+
+#OTHER FOLDERS
+/release/
+/docs/
