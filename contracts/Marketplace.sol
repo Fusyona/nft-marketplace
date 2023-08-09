@@ -3,12 +3,15 @@ pragma solidity ^0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IMarketplace} from "./IMarketplace.sol";
 import {ABDKMath64x64} from "./libraries/ABDKMath64x64.sol";
 import {MathFees} from "./libraries/MathFees.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
+contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
     using ABDKMath64x64 for int128;
     using MathFees for int128;
 
@@ -154,9 +157,30 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 priceOfTrade
     ) private {
         _payingBenefits(seller, priceOfTrade);
-        IERC1155 ierc1155 = IERC1155(collection);
-        ierc1155.safeTransferFrom(address(this), buyer, nftId, ONE_COPY, "");
+        _safeTransferTo(buyer, collection, nftId);
         emit NFTSold(buyer, seller, collection, nftId, priceOfTrade);
+    }
+
+    function _payingBenefits(address seller, uint256 moneyRequired) private {
+        uint256 fusyonaFee = getFusyonaFeeFor(moneyRequired);
+        fusyBenefitsAccumulated += fusyonaFee;
+        payable(seller).transfer(moneyRequired - fusyonaFee);
+    }
+
+    function getFusyonaFeeFor(
+        uint256 netPayment
+    ) public view returns (uint256) {
+        return feeRatio.mulu(netPayment);
+    }
+
+    function _safeTransferTo(
+        address to,
+        address collection,
+        uint nftId
+    ) private {
+        if (_is1155(collection))
+            _safeTransfer_1155(collection, nftId, address(this), to);
+        else _safeTransfer_721(collection, nftId, address(this), to);
     }
 
     function makeOffer(
@@ -240,49 +264,34 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         }
     }
 
-    function _payingBenefits(address seller, uint256 moneyRequired) private {
-        uint256 fusyonaFee = getFusyonaFeeFor(moneyRequired);
-        fusyBenefitsAccumulated += fusyonaFee;
-        payable(seller).transfer(moneyRequired - fusyonaFee);
-    }
-
-    function getFusyonaFeeFor(
-        uint256 netPayment
-    ) public view returns (uint256) {
-        return feeRatio.mulu(netPayment);
-    }
-
     function list(
         address collection,
         uint256 nftId,
         uint256 price
     ) external override {
-        _listRequirements(collection, nftId, price);
+        require(
+            !isListed(collection, nftId),
+            "Marketplace: NFT already listed"
+        );
+        bool isErc1155 = _is1155(collection);
+        require(
+            isErc1155
+                ? _senderIsOwnerOf1155Nft(collection, nftId)
+                : _senderIsOwnerOf721Nft(collection, nftId),
+            "Marketplace: You don't own the NFT"
+        );
+        require(price > 0, "Marketplace: Price must be greater than 0");
 
         address seller = msg.sender;
-        IERC1155 ierc1155 = IERC1155(collection);
-        ierc1155.safeTransferFrom(seller, address(this), nftId, ONE_COPY, "");
+
+        if (isErc1155) _safeTransferFromSender_1155(collection, nftId);
+        else _safeTransferFromSender_721(collection, nftId);
+
         NFTForSale storage newNFTforListing = nftsListed[collection][nftId];
         newNFTforListing.listed = true;
         newNFTforListing.price = price;
         newNFTforListing.seller = seller;
         emit NFTListed(seller, collection, nftId, price);
-    }
-
-    function _listRequirements(
-        address collection,
-        uint256 nftId,
-        uint256 price
-    ) private view {
-        require(
-            !isListed(collection, nftId),
-            "Marketplace: NFT already listed"
-        );
-        require(
-            _senderIsTheOwnerOfNft(collection, nftId),
-            "Marketplace: You don't own the NFT"
-        );
-        require(price > 0, "Marketplace: Price must be greater than 0");
     }
 
     function isListed(
@@ -293,12 +302,63 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         return nftTarget.listed;
     }
 
-    function _senderIsTheOwnerOfNft(
+    function _is1155(address _contract) private view returns (bool) {
+        bytes4 _INTERFACE_ID_ERC1155 = 0xd9b67a26;
+        return
+            ERC165Checker.supportsERC165InterfaceUnchecked(
+                _contract,
+                _INTERFACE_ID_ERC1155
+            );
+    }
+
+    function _senderIsOwnerOf1155Nft(
         address collection,
         uint256 nftId
     ) private view returns (bool) {
         IERC1155 ierc1155 = IERC1155(collection);
         return ierc1155.balanceOf(msg.sender, nftId) > 0;
+    }
+
+    function _senderIsOwnerOf721Nft(
+        address collection,
+        uint256 nftId
+    ) private view returns (bool) {
+        IERC721 ierc721 = IERC721(collection);
+        return ierc721.ownerOf(nftId) == msg.sender;
+    }
+
+    function _safeTransferFromSender_1155(
+        address collection,
+        uint nftId
+    ) private {
+        _safeTransfer_1155(collection, nftId, msg.sender, address(this));
+    }
+
+    function _safeTransfer_1155(
+        address collection,
+        uint nftId,
+        address from,
+        address to
+    ) private {
+        IERC1155 ierc1155 = IERC1155(collection);
+        ierc1155.safeTransferFrom(from, to, nftId, ONE_COPY, "");
+    }
+
+    function _safeTransferFromSender_721(
+        address collection,
+        uint nftId
+    ) private {
+        _safeTransfer_721(collection, nftId, msg.sender, address(this));
+    }
+
+    function _safeTransfer_721(
+        address collection,
+        uint nftId,
+        address from,
+        address to
+    ) private {
+        IERC721 ierc721 = IERC721(collection);
+        ierc721.safeTransferFrom(from, to, nftId);
     }
 
     function makeCounteroffer(
@@ -418,7 +478,11 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         nft.listed = false;
         _transferRemainingToSender(offer.price + msg.value, counteroffer.price);
         _payingBenefits(seller, counteroffer.price);
-        _transferNftToSender(counteroffer.collection, counteroffer.nftId);
+        _safeTransferTo(
+            msg.sender,
+            counteroffer.collection,
+            counteroffer.nftId
+        );
 
         emit NFTSold(
             msg.sender,
@@ -461,17 +525,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable {
         uint256 offerId = counteroffer.offerId;
 
         return getOffer(collection, nftId, offerId);
-    }
-
-    function _transferNftToSender(address collection, uint256 nftId) private {
-        IERC1155 ierc1155 = IERC1155(collection);
-        ierc1155.safeTransferFrom(
-            address(this),
-            msg.sender,
-            nftId,
-            ONE_COPY,
-            ""
-        );
     }
 
     function changePriceOf(
