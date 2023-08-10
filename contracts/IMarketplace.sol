@@ -142,4 +142,11 @@ interface IMarketplace {
         uint256 priceOffer,
         address indexed buyer
     );
+
+    event RoyaltyPayment(
+        address indexed collection, 
+        uint256 indexed tokenId, 
+        address indexed beneficiary, 
+        uint256 royalty
+    );
 }
