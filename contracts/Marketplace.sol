@@ -10,10 +10,10 @@ import {IMarketplace} from "./IMarketplace.sol";
 import {ABDKMath64x64} from "./libraries/ABDKMath64x64.sol";
 import {MathFees} from "./libraries/MathFees.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {ERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
+import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
-contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder, ERC2981{
+contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder{
     using ABDKMath64x64 for int128;
     using MathFees for int128;
 
@@ -44,7 +44,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder, ERC2
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view override(ERC1155Receiver, ERC2981) returns (bool) {
+    ) public view override(ERC1155Receiver) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -178,14 +178,19 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder, ERC2
     }
 
     function _payRoyalties(address collection, uint256 tokenId, uint256 salePrice) private returns(uint256) {
-        require(_checkRoyalty(collection), "Marketplace: Royalty not supported");
-        (address beneficiary, uint256 royalty) = royaltyInfo(tokenId, salePrice);
-        payable(beneficiary).transfer(royalty);
-        emit RoyaltyPayment(collection, tokenId, beneficiary, royalty);
+        require(checkRoyalty(collection), "Marketplace: Royalty not supported");
+        (address creator, uint256 royalty) = royaltyInfo(collection, tokenId, salePrice);
+        payable(creator).transfer(royalty);
+        emit RoyaltyPayment(collection, tokenId, creator, royalty);
         return royalty;
     }
 
-    function _checkRoyalty(address collection) private view returns (bool) {
+    function royaltyInfo(address collection, uint256 nftId, uint256 salePrice) public view returns (address, uint256) {
+        IERC2981 ierc2981 = IERC2981(collection);
+        return ierc2981.royaltyInfo(nftId, salePrice);
+    }
+    
+    function checkRoyalty(address collection) public view returns (bool) {
         bytes4 INTERFACE_ID_ERC2981 = 0x2a55205a;
         return ERC165Checker.supportsInterface(collection, INTERFACE_ID_ERC2981);
     }

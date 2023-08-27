@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 interface IMarketplace {
     function list(address collection, uint256 tokenId, uint256 price) external;
 
-    function isListed(
+    function isListed (
         address collection,
         uint256 tokenId
     ) external view returns (bool);
