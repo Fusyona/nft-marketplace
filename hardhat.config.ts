@@ -15,6 +15,9 @@ const config: HardhatUserConfig = {
     solidity: "0.8.18",
     namedAccounts: {
         deployer: 0,
+        someOtherAccount: 1,
+        seller: 2,
+        buyer: 3,
     },
     defaultNetwork: "hardhat",
     networks: {
