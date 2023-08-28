@@ -29,12 +29,6 @@ interface IMarketplace {
 
     function buy(address collection, uint256 tokenId) external payable;
 
-    function makeOffer(
-        address collection,
-        uint256 tokenId,
-        uint64 durationInDays
-    ) external payable;
-
     function getOffer(
         address collection,
         uint256 nftId,

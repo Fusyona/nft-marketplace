@@ -11,7 +11,12 @@ import {ABDKMath64x64} from "./libraries/ABDKMath64x64.sol";
 import {MathFees} from "./libraries/MathFees.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
+abstract contract Marketplace is
+    IMarketplace,
+    ERC1155Holder,
+    Ownable,
+    ERC721Holder
+{
     using ABDKMath64x64 for int128;
     using MathFees for int128;
 
@@ -52,7 +57,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         offer.isInitialized = false;
         uint256 moneyToRebase = offer.price;
         address buyer = offer.buyer;
-        payable(buyer).transfer(moneyToRebase);
+        _transfer(buyer, moneyToRebase);
         emit CancelledOffer(
             collection,
             tokenId,
@@ -82,6 +87,8 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         );
     }
 
+    function _transfer(address to, uint256 amount) internal virtual;
+
     function withdraw() external override onlyOwner {
         require(
             fusyBenefitsAccumulated > 0,
@@ -89,7 +96,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         );
         uint256 amountToWithdraw = fusyBenefitsAccumulated;
         fusyBenefitsAccumulated = 0;
-        payable(owner()).transfer(amountToWithdraw);
+        _transfer(owner(), amountToWithdraw);
         emit RootWithdrawal(owner(), amountToWithdraw);
     }
 
@@ -164,7 +171,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
     function _payingBenefits(address seller, uint256 moneyRequired) private {
         uint256 fusyonaFee = getFusyonaFeeFor(moneyRequired);
         fusyBenefitsAccumulated += fusyonaFee;
-        payable(seller).transfer(moneyRequired - fusyonaFee);
+        _transfer(seller, moneyRequired - fusyonaFee);
     }
 
     function getFusyonaFeeFor(
@@ -183,19 +190,20 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         else _safeTransfer_721(collection, nftId, address(this), to);
     }
 
-    function makeOffer(
+    function _makeOffer(
         address collection,
         uint256 nftId,
+        uint256 offerPrice_,
         uint64 durationInDays
-    ) external payable override {
-        uint256 priceOffer = msg.value;
-        _makeOfferRequirements(collection, nftId, priceOffer);
+    ) internal {
+        uint256 offerPrice = _ensureAndGetPaymentFor(offerPrice_);
+        _makeOfferRequirements(collection, nftId, offerPrice);
 
         address buyer = msg.sender;
         Offer memory offer = Offer({
             isInitialized: true,
             buyer: buyer,
-            price: priceOffer,
+            price: offerPrice,
             expirationDate: uint64(block.timestamp) +
                 durationInDays *
                 ONE_DAY_IN_SECONDS,
@@ -207,6 +215,10 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         nft.totalOffers += 1;
         emit OfferMade(buyer, collection, nftId, offerId);
     }
+
+    function _ensureAndGetPaymentFor(
+        uint256 amount
+    ) internal virtual returns (uint256);
 
     function _makeOfferRequirements(
         address collection,
@@ -232,26 +244,14 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
     function buy(address collection, uint256 nftId) external payable override {
         NFTForSale storage nft = nftsListed[collection][nftId];
         address seller = nft.seller;
-        uint256 moneyReceived = msg.value;
         uint256 moneyRequired = nft.price;
+        uint256 moneyReceived = _ensureAndGetPaymentFor(moneyRequired);
 
-        _purchaseRequirements(nft, moneyReceived, moneyRequired);
+        require(nft.listed, "Marketplace: NFT not listed");
 
         nft.listed = false;
         _transferRemainingToSender(moneyReceived, moneyRequired);
         _trade(msg.sender, seller, collection, nftId, moneyRequired);
-    }
-
-    function _purchaseRequirements(
-        NFTForSale storage nft,
-        uint256 moneyReceived,
-        uint256 moneyRequired
-    ) private view {
-        require(nft.listed, "Marketplace: NFT not listed");
-        require(
-            moneyReceived >= moneyRequired,
-            "Marketplace: Sent amount not enough"
-        );
     }
 
     function _transferRemainingToSender(
@@ -473,10 +473,15 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         NFTForSale storage nft = nftsListed[counteroffer.collection][
             counteroffer.nftId
         ];
-        address seller = nft.seller;
+
+        uint256 minAmountToPay = counteroffer.price - offer.price;
+        uint256 receivedPayment = _ensureAndGetPaymentFor(minAmountToPay);
 
         nft.listed = false;
-        _transferRemainingToSender(offer.price + msg.value, counteroffer.price);
+
+        _transferRemainingToSender(receivedPayment, minAmountToPay);
+
+        address seller = nft.seller;
         _payingBenefits(seller, counteroffer.price);
         _safeTransferTo(
             msg.sender,
@@ -509,10 +514,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         require(
             counteroffer.expirationDate > block.timestamp,
             "Marketplace: Counteroffer expired"
-        );
-        require(
-            offer.price + msg.value >= counteroffer.price,
-            "Marketplace: Insufficient funds"
         );
     }
 
