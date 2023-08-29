@@ -1,8 +1,12 @@
-import { deployments, ethers } from "hardhat";
+import IERC20Artifact from "../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json";
+import { deployments, ethers, web3 } from "hardhat";
 import { Address } from "hardhat-deploy/types";
 import { IERC20, IERC721, IErc20PaymentMarketplace } from "../typechain-types";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import MarketplaceWrapper from "../scripts/marketplace-wrapper";
+import Erc20PaymentMarketplaceWrapper from "../scripts/erc20-payment-marketplace-wrapper";
+import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 
 describe("Testing Erc20PaymentMarketplace specific features", () => {
     let erc20: IERC20;
@@ -19,7 +23,7 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
     const buyerIndex = 3;
     let buyer: SignerWithAddress;
     let someOtherAddress: Address;
-    let marketplace: IErc20PaymentMarketplace;
+    let marketplaceWrapper: MarketplaceWrapper;
 
     beforeEach(async () => {
         await deployments.fixture([
@@ -43,31 +47,39 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
         const { someOtherAccount } = await ethers.getNamedSigners();
         someOtherAddress = someOtherAccount.address;
 
-        marketplace = await ethers.getContract("Erc20PaymentMarketplace");
+        marketplaceWrapper = new Erc20PaymentMarketplaceWrapper(
+            marketplaceAddress,
+            deployment.abi,
+            erc20.address,
+            IERC20Artifact.abi,
+            web3.currentProvider as JsonRpcFetchFunc | ExternalProvider
+        );
     });
 
     async function approveAndListBySeller() {
         await erc721.connect(seller).approve(marketplaceAddress, nftId);
-        await marketplace.connect(seller).list(erc721.address, nftId, price);
+        await marketplaceWrapper
+            .withSigner(seller)
+            .list(erc721.address, nftId, price);
     }
 
     async function approveAndMakeOffer() {
         await erc20.connect(buyer).approve(marketplaceAddress, offerPrice);
         const durationInDays = 3;
-        await marketplace
-            .connect(buyer)
+        await marketplaceWrapper
+            .withSigner(buyer)
             .makeOffer(erc721.address, nftId, offerPrice, durationInDays);
     }
 
     describe("Buy function tests", () => {
         beforeEach(async () => {
             await approveAndListBySeller();
-
-            await erc20.connect(buyer).approve(marketplaceAddress, price);
         });
 
         it("After the purchase the Marketplace's token balance should be equal to 2%NFTprice.", async () => {
-            await marketplace.connect(buyer).buy(erc721.address, nftId);
+            await marketplaceWrapper
+                .withSigner(buyer)
+                .buyAtPrice(erc721.address, nftId);
 
             const BY_1 = 1;
             expect(await erc20.balanceOf(marketplaceAddress)).to.be.closeTo(
@@ -80,7 +92,9 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             const ERROR_MARGIN = 1;
 
             await expect(
-                marketplace.connect(buyer).buy(erc721.address, nftId)
+                marketplaceWrapper
+                    .withSigner(buyer)
+                    .buyAtPrice(erc721.address, nftId)
             ).to.changeTokenBalance(
                 erc20,
                 seller.address,
@@ -98,7 +112,9 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
                 );
 
             await expect(
-                marketplace.connect(buyer).buy(erc721.address, nftId)
+                marketplaceWrapper
+                    .withSigner(buyer)
+                    .buyAtPrice(erc721.address, nftId)
             ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
         });
 
@@ -106,7 +122,9 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             await erc20.connect(buyer).approve(marketplaceAddress, 0);
 
             await expect(
-                marketplace.connect(buyer).buy(erc721.address, nftId)
+                marketplaceWrapper.contract
+                    .connect(buyer)
+                    .buy(erc721.address, nftId)
             ).to.be.revertedWith("ERC20: insufficient allowance");
         });
     });
@@ -122,8 +140,8 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
 
         it("Balance of Marketplace should increase in price offer.", async () => {
             await expect(
-                marketplace
-                    .connect(buyer)
+                marketplaceWrapper
+                    .withSigner(buyer)
                     .makeOffer(
                         erc721.address,
                         nftId,
@@ -136,8 +154,8 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
         it("The transaction should reverts if the price offer is less than minPriceOffer", async () => {
             const lessThanMinPriceOffer = ethers.utils.parseEther("0.1");
             await expect(
-                marketplace
-                    .connect(buyer)
+                marketplaceWrapper
+                    .withSigner(buyer)
                     .makeOffer(
                         erc721.address,
                         nftId,
@@ -168,31 +186,34 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             );
             expect(marketplaceBalance.gt(0)).to.be.true;
 
-            const benefits = await marketplace.fusyBenefitsAccumulated();
+            const benefits =
+                await marketplaceWrapper.call.fusyBenefitsAccumulated();
             expect(benefits.eq(0)).to.be.true;
 
-            await expect(marketplace.withdraw()).to.be.revertedWith(
-                "Marketplace: Nothing to withdraw."
-            );
+            await expect(
+                marketplaceWrapper.withSigner(owner).withdraw()
+            ).to.be.revertedWith("Marketplace: Nothing to withdraw.");
         });
 
         it("After trade an NFT should be possible for the Marketplace's owner withdraw the fusyBenefitsAccumulated.", async () => {
             await approveAndBuy();
 
-            const benefits = await marketplace.fusyBenefitsAccumulated();
+            const benefits =
+                await marketplaceWrapper.call.fusyBenefitsAccumulated();
 
             expect(benefits).to.be.equal(
                 await erc20.balanceOf(marketplaceAddress)
             );
 
             await expect(
-                marketplace.connect(owner).withdraw()
+                marketplaceWrapper.withSigner(owner).withdraw()
             ).to.changeTokenBalance(erc20, owner, benefits);
         });
 
         async function approveAndBuy() {
-            await erc20.connect(buyer).approve(marketplaceAddress, price);
-            await marketplace.connect(buyer).buy(erc721.address, nftId);
+            await marketplaceWrapper
+                .withSigner(buyer)
+                .buyAtPrice(erc721.address, nftId);
         }
     });
 
@@ -204,8 +225,8 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             await approveAndListBySeller();
             await approveAndMakeOffer();
 
-            await marketplace
-                .connect(seller)
+            await marketplaceWrapper
+                .withSigner(seller)
                 .makeCounteroffer(
                     erc721.address,
                     nftId,
@@ -222,16 +243,20 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
         it("should emit event CounterofferTaken", async () => {
             const counterofferId = 1;
 
-            await expect(marketplace.connect(buyer).takeCounteroffer(1))
-                .to.emit(marketplace, "CounterofferTaken")
+            await expect(
+                marketplaceWrapper.withSigner(buyer).takeCounterofferAtPrice(1)
+            )
+                .to.emit(marketplaceWrapper.contract, "CounterofferTaken")
                 .withArgs(counterofferId, counterofferPrice, seller.address);
         });
 
         it("should transfer counteroffer price minus fee to seller", async () => {
-            const fee = await marketplace.getFusyonaFeeFor(counterofferPrice);
+            const fee = await marketplaceWrapper.call.getFusyonaFeeFor(
+                counterofferPrice
+            );
 
             await expect(
-                marketplace.connect(buyer).takeCounteroffer(1)
+                marketplaceWrapper.withSigner(buyer).takeCounterofferAtPrice(1)
             ).to.changeTokenBalance(erc20, seller, counterofferPrice.sub(fee));
         });
 
@@ -239,7 +264,7 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
 
             await expect(
-                marketplace.connect(buyer).takeCounteroffer(1)
+                marketplaceWrapper.withSigner(buyer).takeCounterofferAtPrice(1)
             ).to.changeTokenBalance(erc20, buyer, `-${necessaryAmountToSend}`);
         });
     });
@@ -255,8 +280,8 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             const ERROR_MARGIN = 1;
 
             await expect(
-                marketplace
-                    .connect(seller)
+                marketplaceWrapper
+                    .withSigner(seller)
                     .takeOffer(erc721.address, nftId, offerId)
             ).to.changeTokenBalance(
                 erc20,
@@ -271,8 +296,8 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
             const ERROR_MARGIN = 1;
 
             await expect(
-                marketplace
-                    .connect(seller)
+                marketplaceWrapper
+                    .withSigner(seller)
                     .takeOffer(erc721.address, nftId, offerId)
             ).to.changeTokenBalance(
                 erc20,
@@ -291,8 +316,8 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
 
         it("When an offer is cancelled, the money that collateralize it, it's go out from the Marketplace Contract.", async () => {
             await expect(
-                marketplace
-                    .connect(buyer)
+                marketplaceWrapper
+                    .withSigner(buyer)
                     .cancelOffer(erc721.address, nftId, offerId)
             )
                 .to.changeTokenBalance(
