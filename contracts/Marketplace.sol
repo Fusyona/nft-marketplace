@@ -451,18 +451,28 @@ abstract contract Marketplace is
         return _getCounterOfferById(offer.counterofferId);
     }
 
-    function _getCounterOfferById(
-        uint256 id
-    ) private view returns (Counteroffer memory) {
-        return counteroffers[id - 1];
-    }
-
     function getOffer(
         address collection,
         uint256 nftId,
         uint256 offerId
     ) public view returns (Offer memory) {
         return nftsListed[collection][nftId].offers[offerId];
+    }
+
+    function _getCounterOfferById(
+        uint256 id
+    ) private view returns (Counteroffer memory) {
+        return counteroffers[id - 1];
+    }
+
+    function getCounteroffer(
+        uint256 counterofferId
+    ) external view returns (Counteroffer memory) {
+        require(
+            counterofferId > 0 && counterofferId <= counteroffers.length,
+            "Marketplace: Counteroffer not found"
+        );
+        return _getCounterOfferById(counterofferId);
     }
 
     function takeCounteroffer(uint256 id) external payable override {

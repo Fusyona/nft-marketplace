@@ -69,6 +69,10 @@ interface IMarketplace {
         uint256 offerId
     ) external view returns (Counteroffer calldata);
 
+    function getCounteroffer(
+        uint256 counterofferId
+    ) external view returns (Counteroffer calldata);
+
     struct Counteroffer {
         address collection;
         uint256 nftId;
