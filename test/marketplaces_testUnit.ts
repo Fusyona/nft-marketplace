@@ -1,25 +1,23 @@
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { assert, expect } from "chai";
 import { BigNumber, Signer } from "ethers";
-import { deployments, ethers } from "hardhat";
+import { deployments, ethers, web3 } from "hardhat";
 import { Address, Deployment } from "hardhat-deploy/types";
-import MarketplaceWrapperForOneSigner from "../../scripts/marketplace-wrapper-for-one-signer";
-import MarketplaceWrapperForOneSigner_Builder from "../../scripts/marketplace-wrapper-for-one-signer.builder";
-import MarketplaceWrapperForOneSigner_Director from "../../scripts/marketplace-wrapper-for-one-signer.director";
+import MarketplaceWrapper from "../scripts/marketplace-wrapper";
+import { IERC1155, IERC721 } from "../typechain-types";
+import { toABDKMath64x64 } from "./utils";
+import MsgValuePaymentMarketplaceWrapper from "../scripts/msg-value-payment-marketplace-wrapper";
 import {
-    ERC1155,
-    IERC1155,
-    IERC721,
-    MockERC1155Collection,
-} from "../../typechain-types";
-import { toABDKMath64x64 } from "../utils";
-import { get } from "http";
+    ExternalProvider,
+    JsonRpcFetchFunc,
+    JsonRpcProvider,
+} from "@ethersproject/providers";
 
 type SignerWithAddress = Signer & { address: Address };
 
-const collectionTypes = ["ERC1155", "ERC721"];
+const MARKETPLACE_CONTRACT_NAME = "MsgValuePaymentMarketplace";
 
-for (const collectionType of collectionTypes) {
+for (const collectionType of ["ERC1155", "ERC721"]) {
     describe(`Testing Marketplace Smart Contract for ${collectionType} Collection`, () => {
         let signer: SignerWithAddress;
         const OWNER_SIGNER_INDEX = 0;
@@ -29,18 +27,27 @@ for (const collectionType of collectionTypes) {
         let BN = BigNumber;
         const twoUp64 = BN.from(2).pow(64);
         const _2percent = BN.from(2).mul(twoUp64).div(BN.from(100));
+        let marketplaceWrapper: MarketplaceWrapper;
 
         beforeEach(async () => {
             await deployments.fixture([
-                "Marketplace",
+                MARKETPLACE_CONTRACT_NAME,
                 `Mock${collectionType}Collection`,
             ]);
             await setInstances();
             await defaultSigner();
+
+            marketplaceWrapper = new MsgValuePaymentMarketplaceWrapper(
+                marketplaceDeployment.address,
+                marketplaceDeployment.abi,
+                web3.currentProvider as ExternalProvider | JsonRpcFetchFunc
+            ).withSignerIndex(OWNER_SIGNER_INDEX);
         });
 
         async function setInstances() {
-            marketplaceDeployment = await deployments.get("Marketplace");
+            marketplaceDeployment = await deployments.get(
+                MARKETPLACE_CONTRACT_NAME
+            );
             mockCollectionDeployment = await deployments.get(
                 `Mock${collectionType}Collection`
             );
@@ -66,7 +73,7 @@ for (const collectionType of collectionTypes) {
         }
 
         async function tMakeOffer(
-            marketplace: MarketplaceWrapperForOneSigner,
+            marketplace: MarketplaceWrapper,
             collectionAddress: Address,
             nftId: number | BigNumber,
             priceOffer: BigNumber,
@@ -116,7 +123,7 @@ for (const collectionType of collectionTypes) {
             constructor(
                 private sellerSignerIndex: number,
                 private nftPrice: BigNumber,
-                private buyerMarketplace: MarketplaceWrapperForOneSigner
+                private buyerMarketplace: MarketplaceWrapper
             ) {}
 
             async setupAndMakeOffer(
@@ -147,7 +154,7 @@ for (const collectionType of collectionTypes) {
         }
 
         async function tList(
-            marketplace: MarketplaceWrapperForOneSigner,
+            marketplace: MarketplaceWrapper,
             collectionAddress: Address,
             nftId: number | BigNumber,
             price: BigNumber
@@ -176,16 +183,15 @@ for (const collectionType of collectionTypes) {
         }
 
         function getMarketplaceFromSignerIndex(signerIndex: number) {
-            const builder = new MarketplaceWrapperForOneSigner_Builder();
-            MarketplaceWrapperForOneSigner_Director.hardhatConfig(builder);
-            return builder
-                .withContractAddress(marketplaceDeployment.address)
-                .withSignerIndex(signerIndex)
-                .build();
+            return new MsgValuePaymentMarketplaceWrapper(
+                marketplaceDeployment.address,
+                marketplaceDeployment.abi,
+                web3.currentProvider as ExternalProvider | JsonRpcFetchFunc
+            ).withSignerIndex(signerIndex);
         }
 
         async function tApprove(
-            marketplace: MarketplaceWrapperForOneSigner,
+            marketplace: MarketplaceWrapper,
             seller: Signer
         ) {
             const mockCollection = await getMockCollection();
@@ -209,7 +215,7 @@ for (const collectionType of collectionTypes) {
         });
 
         describe("List functions's tests.", () => {
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
             let collectionAddress: Address;
             const nftId1 = 1;
             const price = ethers.utils.parseEther("1");
@@ -317,7 +323,7 @@ for (const collectionType of collectionTypes) {
         describe("Buy function's tests", () => {
             const BUYER_SIGNER_INDEX = 1;
             let buyer: SignerWithAddress;
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
 
             beforeEach(async () => {
                 marketplace = getMarketplaceFromSignerIndex(BUYER_SIGNER_INDEX);
@@ -339,7 +345,7 @@ for (const collectionType of collectionTypes) {
                 const _tvlBeforeBuy = BN.from(
                     await marketplace.totalOfNFTListed()
                 ).toNumber();
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
                 const _tvlAfterBuy = BN.from(
                     await marketplace.totalOfNFTListed()
                 ).toNumber();
@@ -370,7 +376,7 @@ for (const collectionType of collectionTypes) {
                 const expectedBalanceOfMarketplace =
                     actualBalanceOfMarketplaceBeforeBuy.add(_2percentPrice);
 
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
 
                 const actualBalanceOfMarketplace =
                     await ethers.provider.getBalance(
@@ -401,7 +407,7 @@ for (const collectionType of collectionTypes) {
                     price.sub(_2percentPrice)
                 );
 
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
 
                 const actualBalanceOfSeller = await ethers.provider.getBalance(
                     signer.address
@@ -450,7 +456,7 @@ for (const collectionType of collectionTypes) {
                     price
                 );
 
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
 
                 const balanceOfBuyerInNFT = (
                     await tBalanceOf(buyer.address, nftId)
@@ -475,7 +481,7 @@ for (const collectionType of collectionTypes) {
                 );
 
                 const wrappedFunction = async () => {
-                    await marketplace.buy(collectionAddress, nftId);
+                    await marketplace.buyAtPrice(collectionAddress, nftId);
                 };
                 expect(wrappedFunction).to.throw;
             });
@@ -485,7 +491,7 @@ for (const collectionType of collectionTypes) {
                 const nftId = 1;
 
                 await expect(
-                    marketplace.buy(collectionAddress, nftId)
+                    marketplace.buyAtPrice(collectionAddress, nftId)
                 ).to.be.revertedWith("Marketplace: NFT not listed");
             });
 
@@ -501,13 +507,13 @@ for (const collectionType of collectionTypes) {
                 );
                 const SCAMMER_SIGNER_INDEX = 2;
 
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
 
                 marketplace =
                     getMarketplaceFromSignerIndex(SCAMMER_SIGNER_INDEX);
 
                 await expect(
-                    marketplace.buy(collectionAddress, nftId)
+                    marketplace.buyAtPrice(collectionAddress, nftId)
                 ).to.be.revertedWith("Marketplace: NFT not listed");
             });
 
@@ -535,7 +541,7 @@ for (const collectionType of collectionTypes) {
         describe("MakeOffer function's tests. ", () => {
             const BUYER_SIGNER_INDEX = 1;
             let buyer: Signer;
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
 
             beforeEach(async () => {
                 marketplace = getMarketplaceFromSignerIndex(BUYER_SIGNER_INDEX);
@@ -694,7 +700,7 @@ for (const collectionType of collectionTypes) {
         });
 
         describe("Escrow functions's tests", () => {
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
             beforeEach(async () => {
                 marketplace = getMarketplaceForOwner();
             });
@@ -703,7 +709,7 @@ for (const collectionType of collectionTypes) {
                 await presetRequirements();
                 const expectedFusyBenefitsAcc = "0";
                 const actualFusyBenefitsAcc =
-                    await marketplace.fusyBenefitsAccumulated();
+                    await marketplace.call.fusyBenefitsAccumulated();
                 expect(actualFusyBenefitsAcc.toString()).to.be.eq(
                     expectedFusyBenefitsAcc
                 );
@@ -718,7 +724,7 @@ for (const collectionType of collectionTypes) {
                     )
                 );
                 const fusyBenefitsAccumulated =
-                    await marketplace.fusyBenefitsAccumulated();
+                    await marketplace.call.fusyBenefitsAccumulated();
 
                 expect(balanceOfMarketPlace.gte(BN.from(0))).to.be.true;
                 expect(fusyBenefitsAccumulated).to.be.eq(BN.from(0));
@@ -800,13 +806,13 @@ for (const collectionType of collectionTypes) {
                 const expectedBalanceOfMarketplace =
                     actualBalanceOfMarketplaceBeforeBuy.add(_2percentPrice);
 
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
                 const actualBalanceOfMarketplace =
                     await ethers.provider.getBalance(
                         marketplace.contract.address
                     );
                 const actualFusyBenefitsAcc =
-                    await marketplace.fusyBenefitsAccumulated();
+                    await marketplace.call.fusyBenefitsAccumulated();
                 expect(actualBalanceOfMarketplace).to.be.eq(
                     expectedBalanceOfMarketplace
                 );
@@ -855,9 +861,9 @@ for (const collectionType of collectionTypes) {
 
                 let marketplace =
                     getMarketplaceFromSignerIndex(BUYER_1_SIGNER_INDEX);
-                await marketplace.buy(collectionAddress, nftIds[0]);
+                await marketplace.buyAtPrice(collectionAddress, nftIds[0]);
                 const expectedFusyBenefitsAcc =
-                    await marketplace.fusyBenefitsAccumulated();
+                    await marketplace.call.fusyBenefitsAccumulated();
 
                 marketplace =
                     getMarketplaceFromSignerIndex(BUYER_2_SIGNER_INDEX);
@@ -872,7 +878,7 @@ for (const collectionType of collectionTypes) {
                 );
 
                 const actualFusyBenefitsAcc =
-                    await marketplace.fusyBenefitsAccumulated();
+                    await marketplace.call.fusyBenefitsAccumulated();
 
                 expect(
                     actualFusyBenefitsAcc,
@@ -894,12 +900,12 @@ for (const collectionType of collectionTypes) {
                 const BUYER_SIGNER_INDEX = 1;
                 let marketplace =
                     getMarketplaceFromSignerIndex(BUYER_SIGNER_INDEX);
-                await marketplace.buy(collectionAddress, nftId);
+                await marketplace.buyAtPrice(collectionAddress, nftId);
                 marketplace = getMarketplaceForOwner();
                 await marketplace.withdraw();
                 const expectedFusyBenefitsAcc = "0";
                 const actualFusyBenefitsAcc =
-                    await marketplace.fusyBenefitsAccumulated();
+                    await marketplace.call.fusyBenefitsAccumulated();
                 expect(
                     actualFusyBenefitsAcc.toString(),
                     "The fusyBenefitsAccumulated didn't down to 0 value."
@@ -910,7 +916,7 @@ for (const collectionType of collectionTypes) {
         describe("MakeCounteroffer function tests", () => {
             const SELLER_SIGNER_INDEX = 1;
             let seller: SignerWithAddress;
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
             const nftPrice = BN.from(100);
             const counterofferPrice = 91;
             let collectionAddress: Address;
@@ -1144,7 +1150,7 @@ for (const collectionType of collectionTypes) {
                     offerId,
                     counterofferPrice
                 );
-                const counteroffer = await marketplace.getCounteroffer(
+                const counteroffer = await marketplace.getCounterofferFromOffer(
                     collectionAddress,
                     nftId,
                     offerId
@@ -1253,7 +1259,7 @@ for (const collectionType of collectionTypes) {
             const SELLER_SIGNER_INDEX = 1;
             let seller: SignerWithAddress;
             let buyer: SignerWithAddress;
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
             let collectionAddress: Address;
             let helper: NftSaleHelper;
             const COUNTER_OFFER_DURATION_IN_DAYS = 3;
@@ -1298,7 +1304,7 @@ for (const collectionType of collectionTypes) {
 
             it("should revert if ID is zero", async () => {
                 await expect(
-                    marketplace.takeCounteroffer(0)
+                    marketplace.takeCounterofferAtPrice(0)
                 ).to.be.revertedWith("Marketplace: Counteroffer not found");
             });
 
@@ -1307,7 +1313,7 @@ for (const collectionType of collectionTypes) {
                 const id = TOTAL_COUNTER_OFFERS + 1;
 
                 await expect(
-                    marketplace.takeCounteroffer(id)
+                    marketplace.takeCounterofferAtPrice(id)
                 ).to.be.revertedWith("Marketplace: Counteroffer not found");
             });
 
@@ -1315,7 +1321,7 @@ for (const collectionType of collectionTypes) {
                 const notTheOfferMakerApi =
                     getMarketplaceFromSignerIndex(SELLER_SIGNER_INDEX);
                 await expect(
-                    notTheOfferMakerApi.takeCounteroffer(1)
+                    notTheOfferMakerApi.takeCounterofferAtPrice(1)
                 ).to.be.revertedWith("Marketplace: You didn't make the offer");
             });
 
@@ -1325,7 +1331,7 @@ for (const collectionType of collectionTypes) {
                 );
 
                 await expect(
-                    marketplace.takeCounteroffer(1)
+                    marketplace.takeCounterofferAtPrice(1)
                 ).to.be.revertedWith("Marketplace: Counteroffer expired");
             });
 
@@ -1336,7 +1342,7 @@ for (const collectionType of collectionTypes) {
 
                 await expect(
                     marketplace.takeCounteroffer(1, insufficientValueToSend)
-                ).to.be.revertedWith("Marketplace: Insufficient funds");
+                ).to.be.revertedWith("Marketplace: Sent amount not enough");
             });
 
             it("should emit event CounterofferTaken", async () => {
@@ -1359,7 +1365,7 @@ for (const collectionType of collectionTypes) {
 
                 await marketplace.takeCounteroffer(1, necessaryAmountToSend);
 
-                const isListed = await marketplace.isListed(
+                const isListed = await marketplace.call.isListed(
                     collectionAddress,
                     1
                 );
@@ -1397,7 +1403,7 @@ for (const collectionType of collectionTypes) {
             it("should transfer counteroffer price minus fee to seller", async () => {
                 const necessaryAmountToSend = counterofferPrice.sub(offerPrice);
 
-                const fee = await marketplace.getFusyonaFeeFor(
+                const fee = await marketplace.call.getFusyonaFeeFor(
                     counterofferPrice
                 );
 
@@ -1434,7 +1440,7 @@ for (const collectionType of collectionTypes) {
 
         describe("ChangePriceOf function tests", () => {
             let seller: SignerWithAddress;
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
             let collectionAddress: Address;
             const nftId = 1;
             const nftPrice = BN.from(100);
@@ -1515,7 +1521,7 @@ for (const collectionType of collectionTypes) {
                     newPrice
                 );
 
-                const nftInfo = await marketplace.getNftInfo(
+                const nftInfo = await marketplace.call.getNftInfo(
                     collectionAddress,
                     nftId
                 );
@@ -1536,7 +1542,7 @@ for (const collectionType of collectionTypes) {
         });
 
         describe("TakeOffer function's tests", () => {
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
 
             beforeEach(async () => {
                 marketplace = getMarketplaceForOwner();
@@ -1677,7 +1683,7 @@ for (const collectionType of collectionTypes) {
                     indexOfOfferMapping
                 );
 
-                const nftInfo = await marketplace.getNftInfo(
+                const nftInfo = await marketplace.call.getNftInfo(
                     collectionAddress,
                     nftId
                 );
@@ -1716,7 +1722,7 @@ for (const collectionType of collectionTypes) {
                 const BUYER_SIGNER_INDEX = 1;
                 const buyerApi =
                     getMarketplaceFromSignerIndex(BUYER_SIGNER_INDEX);
-                await buyerApi.buy(collectionAddress, nftId);
+                await buyerApi.buyAtPrice(collectionAddress, nftId);
 
                 const indexOfOfferMapping = BN.from(0);
                 await expect(
@@ -1760,7 +1766,7 @@ for (const collectionType of collectionTypes) {
         });
 
         describe("SetFloorRatio function tests", () => {
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
 
             beforeEach(async () => {
                 marketplace = getMarketplaceForOwner();
@@ -1803,7 +1809,7 @@ for (const collectionType of collectionTypes) {
 
                 const EXPECTED_NEW_FLOOR_RATIO =
                     toABDKMath64x64(NEW_PERCENTAGE);
-                expect(await marketplace.floorRatio()).to.be.equal(
+                expect(await marketplace.call.floorRatio()).to.be.equal(
                     EXPECTED_NEW_FLOOR_RATIO
                 );
             });
@@ -1819,7 +1825,7 @@ for (const collectionType of collectionTypes) {
             const NOT_THE_BUYER_SIGNER_INDEX = 3;
             let imNotTheBuyer: Signer;
 
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
             let collectionAddress: Address;
             let indexOfOfferMapping: number;
             const nftId = 1;
@@ -1963,7 +1969,7 @@ for (const collectionType of collectionTypes) {
         });
 
         describe("SetFeeRatioFromPercentage function tests", () => {
-            let marketplace: MarketplaceWrapperForOneSigner;
+            let marketplace: MarketplaceWrapper;
 
             beforeEach(async () => {
                 marketplace = getMarketplaceForOwner();
@@ -2005,7 +2011,7 @@ for (const collectionType of collectionTypes) {
                 ).to.be.not.reverted;
 
                 const EXPECTED_NEW_FEE_RATIO = toABDKMath64x64(NEW_PERCENTAGE);
-                expect(await marketplace.feeRatio()).to.be.equal(
+                expect(await marketplace.call.feeRatio()).to.be.equal(
                     EXPECTED_NEW_FEE_RATIO
                 );
             });
