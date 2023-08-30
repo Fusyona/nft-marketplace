@@ -1,15 +1,17 @@
 import { expect } from "chai";
-import { deployments, ethers } from "hardhat";
+import { deployments, ethers, web3 } from "hardhat";
 import {
     FusyERC721CollectionWithRoyaltySupport,
-    Marketplace,
-    MsgValuePaymentMarketplace,
-    Erc20PaymentMarketplace,
     IERC20,
 } from "../typechain-types";
+import IErc20Artifact from "../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, ContractTransaction } from "ethers";
 import { Address } from "hardhat-deploy/types";
+import MarketplaceWrapper from "../scripts/marketplace-wrapper";
+import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
+import MsgValuePaymentMarketplaceWrapper from "../scripts/msg-value-payment-marketplace-wrapper";
+import Erc20PaymentMarketplaceWrapper from "../scripts/erc20-payment-marketplace-wrapper";
 
 describe("Royalty support tests", () => {
     const ERROR_MARGIN = 1;
@@ -17,10 +19,7 @@ describe("Royalty support tests", () => {
     let seller: SignerWithAddress;
     let buyer: SignerWithAddress;
 
-    let msgValueMarketplace: MsgValuePaymentMarketplace;
-    let erc20Marketplace: Erc20PaymentMarketplace;
     let collectionContractWithERC2981: FusyERC721CollectionWithRoyaltySupport;
-    let payToken: IERC20;
 
     let nftId = 1;
     const nftPrice = ethers.utils.parseEther("10");
@@ -44,35 +43,45 @@ describe("Royalty support tests", () => {
         collectionContractWithERC2981 = await ethers.getContract(
             "FusyERC721CollectionWithRoyaltySupport"
         );
-        msgValueMarketplace = await ethers.getContract(
-            "MsgValuePaymentMarketplace"
-        );
-        payToken = await ethers.getContract("MockERC20");
-        erc20Marketplace = await ethers.getContract("Erc20PaymentMarketplace");
     });
 
     describe("MsgValuePaymentMarketplace", () => {
+        let msgValueMarketplaceWrapper: MsgValuePaymentMarketplaceWrapper;
+
         beforeEach(async () => {
+            msgValueMarketplaceWrapper = await getMsgValueMarketplaceWrapper();
+
             await collectionContractWithERC2981.connect(seller).createNFT();
             await collectionContractWithERC2981
                 .connect(seller)
-                .approve(msgValueMarketplace.address, nftId);
+                .approve(msgValueMarketplaceWrapper.contract.address, nftId);
 
-            await msgValueMarketplace
-                .connect(seller)
+            await msgValueMarketplaceWrapper
+                .withSigner(seller)
                 .list(collectionContractWithERC2981.address, nftId, nftPrice);
         });
 
+        async function getMsgValueMarketplaceWrapper() {
+            const { address, abi } = await deployments.get(
+                "MsgValuePaymentMarketplace"
+            );
+            return new MsgValuePaymentMarketplaceWrapper(
+                address,
+                abi,
+                web3.currentProvider as ExternalProvider | JsonRpcFetchFunc
+            );
+        }
+
         async function expectToChangeEtherBalance(
             trxPromise: (
-                marketplace: Marketplace
+                wrapper: MarketplaceWrapper
             ) => Promise<ContractTransaction>,
             target: Address,
             balanceChange: number | BigNumber,
             errorMargin: number | BigNumber
         ) {
             const balanceBefore = await ethers.provider.getBalance(target);
-            await trxPromise(msgValueMarketplace);
+            await trxPromise(msgValueMarketplaceWrapper);
             const balanceAfter = await ethers.provider.getBalance(target);
 
             expect(balanceAfter.sub(balanceBefore)).to.be.closeTo(
@@ -90,10 +99,11 @@ describe("Royalty support tests", () => {
                 await expectToChangeEtherBalance(
                     (m) =>
                         m
-                            .connect(buyer)
-                            .buy(collectionContractWithERC2981.address, nftId, {
-                                value: nftPrice,
-                            }),
+                            .withSigner(buyer)
+                            .buyAtPrice(
+                                collectionContractWithERC2981.address,
+                                nftId
+                            ),
                     seller.address,
                     nftPrice.sub(royalty).sub(fee),
                     ERROR_MARGIN
@@ -104,10 +114,11 @@ describe("Royalty support tests", () => {
                 await expectToChangeEtherBalance(
                     (m) =>
                         m
-                            .connect(buyer)
-                            .buy(collectionContractWithERC2981.address, nftId, {
-                                value: nftPrice,
-                            }),
+                            .withSigner(buyer)
+                            .buyAtPrice(
+                                collectionContractWithERC2981.address,
+                                nftId
+                            ),
                     creator.address,
                     royalty,
                     ERROR_MARGIN
@@ -116,13 +127,17 @@ describe("Royalty support tests", () => {
 
             it("should emit RoyaltyPayment event", async () => {
                 await expect(
-                    msgValueMarketplace
-                        .connect(buyer)
-                        .buy(collectionContractWithERC2981.address, nftId, {
-                            value: nftPrice,
-                        })
+                    msgValueMarketplaceWrapper
+                        .withSigner(buyer)
+                        .buyAtPrice(
+                            collectionContractWithERC2981.address,
+                            nftId
+                        )
                 )
-                    .to.emit(msgValueMarketplace, "RoyaltyPayment")
+                    .to.emit(
+                        msgValueMarketplaceWrapper.contract,
+                        "RoyaltyPayment"
+                    )
                     .withArgs(
                         collectionContractWithERC2981.address,
                         nftId,
@@ -145,172 +160,8 @@ describe("Royalty support tests", () => {
 
             async function makeOffer() {
                 const DURATION_IN_DAYS = 3;
-                await msgValueMarketplace
-                    .connect(buyer)
-                    .makeOffer(
-                        collectionContractWithERC2981.address,
-                        nftId,
-                        DURATION_IN_DAYS,
-                        {
-                            value: offerPrice,
-                        }
-                    );
-            }
-
-            async function makeCounteroffer() {
-                const OFFER_ID = 0;
-                const DURATION_IN_DAYS = 3;
-                await msgValueMarketplace
-                    .connect(seller)
-                    .makeCounteroffer(
-                        collectionContractWithERC2981.address,
-                        nftId,
-                        OFFER_ID,
-                        counterofferPrice,
-                        DURATION_IN_DAYS
-                    );
-            }
-
-            it("should discount royalty from the seller", async () => {
-                const fee = counterofferPrice.div(50);
-
-                await expectToChangeEtherBalance(
-                    (m) =>
-                        m.connect(buyer).takeCounteroffer(COUNTER_OFFER_ID, {
-                            value: counterofferPrice,
-                        }),
-                    seller.address,
-                    counterofferPrice.sub(royalty).sub(fee),
-                    ERROR_MARGIN
-                );
-            });
-
-            it("should send royalty to the creator", async () => {
-                await expectToChangeEtherBalance(
-                    (m) =>
-                        m.connect(buyer).takeCounteroffer(COUNTER_OFFER_ID, {
-                            value: counterofferPrice,
-                        }),
-                    creator.address,
-                    royalty,
-                    ERROR_MARGIN
-                );
-            });
-
-            it("should emit RoyaltyPayment event", async () => {
-                await expect(
-                    msgValueMarketplace
-                        .connect(buyer)
-                        .takeCounteroffer(COUNTER_OFFER_ID, {
-                            value: counterofferPrice,
-                        })
-                )
-                    .to.emit(msgValueMarketplace, "RoyaltyPayment")
-                    .withArgs(
-                        collectionContractWithERC2981.address,
-                        nftId,
-                        creator.address,
-                        royalty
-                    );
-            });
-        });
-    });
-
-    describe("Erc20PaymentMarketplace", () => {
-        beforeEach(async () => {
-            await mintNft();
-            await approveNftSpending();
-            await listNft();
-        });
-
-        async function mintNft() {
-            await collectionContractWithERC2981.connect(seller).createNFT();
-        }
-
-        async function approveNftSpending() {
-            await collectionContractWithERC2981
-                .connect(seller)
-                .approve(erc20Marketplace.address, nftId);
-        }
-
-        async function listNft() {
-            await erc20Marketplace
-                .connect(seller)
-                .list(collectionContractWithERC2981.address, nftId, nftPrice);
-        }
-
-        describe("buy()", () => {
-            const royalty = nftPrice.div(10);
-
-            beforeEach(async () => {
-                await payToken
-                    .connect(buyer)
-                    .approve(erc20Marketplace.address, nftPrice);
-            });
-
-            it("should discount royalty from the seller", async () => {
-                const fee = nftPrice.div(50);
-
-                await expect(
-                    erc20Marketplace
-                        .connect(buyer)
-                        .buy(collectionContractWithERC2981.address, nftId)
-                ).to.changeTokenBalance(
-                    payToken,
-                    seller.address,
-                    nftPrice.sub(royalty).sub(fee),
-                    ERROR_MARGIN
-                );
-            });
-
-            it("should send royalty to the creator", async () => {
-                await expect(
-                    erc20Marketplace
-                        .connect(buyer)
-                        .buy(collectionContractWithERC2981.address, nftId)
-                ).to.changeTokenBalance(
-                    payToken,
-                    creator.address,
-                    royalty,
-                    ERROR_MARGIN
-                );
-            });
-
-            it("should emit RoyaltyPayment event", async () => {
-                await expect(
-                    erc20Marketplace
-                        .connect(buyer)
-                        .buy(collectionContractWithERC2981.address, nftId)
-                )
-                    .to.emit(erc20Marketplace, "RoyaltyPayment")
-                    .withArgs(
-                        collectionContractWithERC2981.address,
-                        nftId,
-                        creator.address,
-                        royalty
-                    );
-            });
-        });
-
-        describe("takeCounteroffer()", async () => {
-            const offerPrice = nftPrice.sub(2);
-            const counterofferPrice = offerPrice.add(1);
-            const COUNTER_OFFER_ID = 1;
-            const royalty = counterofferPrice.div(10);
-
-            beforeEach(async () => {
-                await payToken
-                    .connect(buyer)
-                    .approve(erc20Marketplace.address, counterofferPrice);
-
-                await makeOffer();
-                await makeCounteroffer();
-            });
-
-            async function makeOffer() {
-                const DURATION_IN_DAYS = 3;
-                await erc20Marketplace
-                    .connect(buyer)
+                await msgValueMarketplaceWrapper
+                    .withSigner(buyer)
                     .makeOffer(
                         collectionContractWithERC2981.address,
                         nftId,
@@ -322,8 +173,189 @@ describe("Royalty support tests", () => {
             async function makeCounteroffer() {
                 const OFFER_ID = 0;
                 const DURATION_IN_DAYS = 3;
-                await erc20Marketplace
-                    .connect(seller)
+                await msgValueMarketplaceWrapper
+                    .withSigner(seller)
+                    .makeCounteroffer(
+                        collectionContractWithERC2981.address,
+                        nftId,
+                        OFFER_ID,
+                        counterofferPrice,
+                        DURATION_IN_DAYS
+                    );
+            }
+
+            it("should discount royalty from the seller", async () => {
+                const fee = counterofferPrice.div(50);
+
+                await expectToChangeEtherBalance(
+                    (m) =>
+                        m
+                            .withSigner(buyer)
+                            .takeCounterofferAtPrice(COUNTER_OFFER_ID),
+                    seller.address,
+                    counterofferPrice.sub(royalty).sub(fee),
+                    ERROR_MARGIN
+                );
+            });
+
+            it("should send royalty to the creator", async () => {
+                await expectToChangeEtherBalance(
+                    (m) =>
+                        m
+                            .withSigner(buyer)
+                            .takeCounterofferAtPrice(COUNTER_OFFER_ID),
+                    creator.address,
+                    royalty,
+                    ERROR_MARGIN
+                );
+            });
+
+            it("should emit RoyaltyPayment event", async () => {
+                await expect(
+                    msgValueMarketplaceWrapper
+                        .withSigner(buyer)
+                        .takeCounterofferAtPrice(COUNTER_OFFER_ID)
+                )
+                    .to.emit(
+                        msgValueMarketplaceWrapper.contract,
+                        "RoyaltyPayment"
+                    )
+                    .withArgs(
+                        collectionContractWithERC2981.address,
+                        nftId,
+                        creator.address,
+                        royalty
+                    );
+            });
+        });
+    });
+
+    describe("Erc20PaymentMarketplace", () => {
+        let erc20MarketplaceWrapper: Erc20PaymentMarketplaceWrapper;
+        let payToken: IERC20;
+
+        beforeEach(async () => {
+            payToken = await ethers.getContract("MockERC20");
+            erc20MarketplaceWrapper = await getErc20MarketplaceWrapper();
+
+            await mintNft();
+            await approveNftSpending();
+            await listNft();
+        });
+
+        async function getErc20MarketplaceWrapper() {
+            const { address, abi } = await deployments.get(
+                "Erc20PaymentMarketplace"
+            );
+            return new Erc20PaymentMarketplaceWrapper(
+                address,
+                abi,
+                payToken.address,
+                IErc20Artifact.abi,
+                web3.currentProvider as ExternalProvider | JsonRpcFetchFunc
+            );
+        }
+
+        async function mintNft() {
+            await collectionContractWithERC2981.connect(seller).createNFT();
+        }
+
+        async function approveNftSpending() {
+            await collectionContractWithERC2981
+                .connect(seller)
+                .approve(erc20MarketplaceWrapper.contract.address, nftId);
+        }
+
+        async function listNft() {
+            await erc20MarketplaceWrapper
+                .withSigner(seller)
+                .list(collectionContractWithERC2981.address, nftId, nftPrice);
+        }
+
+        describe("buy()", () => {
+            const royalty = nftPrice.div(10);
+
+            it("should discount royalty from the seller", async () => {
+                const fee = nftPrice.div(50);
+
+                await expect(
+                    erc20MarketplaceWrapper
+                        .withSigner(buyer)
+                        .buyAtPrice(
+                            collectionContractWithERC2981.address,
+                            nftId
+                        )
+                ).to.changeTokenBalance(
+                    payToken,
+                    seller.address,
+                    nftPrice.sub(royalty).sub(fee),
+                    ERROR_MARGIN
+                );
+            });
+
+            it("should send royalty to the creator", async () => {
+                await expect(
+                    erc20MarketplaceWrapper
+                        .withSigner(buyer)
+                        .buyAtPrice(
+                            collectionContractWithERC2981.address,
+                            nftId
+                        )
+                ).to.changeTokenBalance(
+                    payToken,
+                    creator.address,
+                    royalty,
+                    ERROR_MARGIN
+                );
+            });
+
+            it("should emit RoyaltyPayment event", async () => {
+                await expect(
+                    erc20MarketplaceWrapper
+                        .withSigner(buyer)
+                        .buyAtPrice(
+                            collectionContractWithERC2981.address,
+                            nftId
+                        )
+                )
+                    .to.emit(erc20MarketplaceWrapper.contract, "RoyaltyPayment")
+                    .withArgs(
+                        collectionContractWithERC2981.address,
+                        nftId,
+                        creator.address,
+                        royalty
+                    );
+            });
+        });
+
+        describe("takeCounteroffer()", async () => {
+            const offerPrice = nftPrice.sub(2);
+            const counterofferPrice = offerPrice.add(1);
+            const COUNTER_OFFER_ID = 1;
+            const royalty = counterofferPrice.div(10);
+
+            beforeEach(async () => {
+                await makeOffer();
+                await makeCounteroffer();
+            });
+
+            async function makeOffer() {
+                const DURATION_IN_DAYS = 3;
+                await erc20MarketplaceWrapper
+                    .withSigner(buyer)
+                    .makeOffer(
+                        collectionContractWithERC2981.address,
+                        nftId,
+                        offerPrice,
+                        DURATION_IN_DAYS
+                    );
+            }
+
+            async function makeCounteroffer() {
+                const OFFER_ID = 0;
+                const DURATION_IN_DAYS = 3;
+                await erc20MarketplaceWrapper
+                    .withSigner(seller)
                     .makeCounteroffer(
                         collectionContractWithERC2981.address,
                         nftId,
@@ -337,9 +369,9 @@ describe("Royalty support tests", () => {
                 const fee = counterofferPrice.div(50);
 
                 await expect(
-                    erc20Marketplace
-                        .connect(buyer)
-                        .takeCounteroffer(COUNTER_OFFER_ID)
+                    erc20MarketplaceWrapper
+                        .withSigner(buyer)
+                        .takeCounterofferAtPrice(COUNTER_OFFER_ID)
                 ).to.changeTokenBalance(
                     payToken,
                     seller.address,
@@ -350,9 +382,9 @@ describe("Royalty support tests", () => {
 
             it("should send royalty to the creator", async () => {
                 await expect(
-                    erc20Marketplace
-                        .connect(buyer)
-                        .takeCounteroffer(COUNTER_OFFER_ID)
+                    erc20MarketplaceWrapper
+                        .withSigner(buyer)
+                        .takeCounterofferAtPrice(COUNTER_OFFER_ID)
                 ).to.changeTokenBalance(
                     payToken,
                     creator.address,
@@ -363,11 +395,11 @@ describe("Royalty support tests", () => {
 
             it("should emit RoyaltyPayment event", async () => {
                 await expect(
-                    erc20Marketplace
-                        .connect(buyer)
-                        .takeCounteroffer(COUNTER_OFFER_ID)
+                    erc20MarketplaceWrapper
+                        .withSigner(buyer)
+                        .takeCounterofferAtPrice(COUNTER_OFFER_ID)
                 )
-                    .to.emit(erc20Marketplace, "RoyaltyPayment")
+                    .to.emit(erc20MarketplaceWrapper.contract, "RoyaltyPayment")
                     .withArgs(
                         collectionContractWithERC2981.address,
                         nftId,
