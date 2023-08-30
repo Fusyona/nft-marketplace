@@ -203,7 +203,7 @@ abstract contract Marketplace is
             tokenId,
             salePrice
         );
-        payable(creator).transfer(royalty);
+        _transfer(creator, royalty);
         emit RoyaltyPayment(collection, tokenId, creator, royalty);
         return royalty;
     }
