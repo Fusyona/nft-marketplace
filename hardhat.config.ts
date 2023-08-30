@@ -18,6 +18,7 @@ const config: HardhatUserConfig = {
         someOtherAccount: 1,
         seller: 2,
         buyer: 3,
+        creator: 4,
     },
     defaultNetwork: "hardhat",
     networks: {
@@ -25,7 +26,7 @@ const config: HardhatUserConfig = {
         mumbai: {
             chainId: 80001,
             url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
-            accounts: [PRIVATE_KEY!],
+            accounts: [process.env.PRIVATE_KEY!],
         },
     },
     gasReporter: {
