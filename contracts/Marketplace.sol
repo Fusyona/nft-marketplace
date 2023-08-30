@@ -527,20 +527,7 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
 
         nft.listed = false;
         _transferRemainingToSender(offer.price + msg.value, counteroffer.price);
-
-        uint256 royalties = _payRoyaltiesIfSupported(
-            counteroffer.collection,
-            counteroffer.nftId,
-            counteroffer.price
-        );
-        _payingBenefits(seller, counteroffer.price, royalties);
-        _safeTransferTo(
-            msg.sender,
-            counteroffer.collection,
-            counteroffer.nftId
-        );
-
-        emit NFTSold(
+        _trade(
             msg.sender,
             seller,
             counteroffer.collection,
