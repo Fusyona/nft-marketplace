@@ -59,6 +59,7 @@ export default class Erc20PaymentMarketplaceWrapper extends MarketplaceWrapper {
     private async erc20ApproveIfNecessary(amount: BigNumber | number) {
         const allowance = await this.getAllowance();
         if (allowance.lt(amount)) {
+            await this.reduceAllowanceToZeroToAvoidExploit();
             await this.waitAndReturn(
                 this._erc20.approve(this.contract.address, amount)
             );
@@ -70,6 +71,11 @@ export default class Erc20PaymentMarketplaceWrapper extends MarketplaceWrapper {
             this.contract.signer.getAddress(),
             this.contract.address
         );
+    }
+
+    private async reduceAllowanceToZeroToAvoidExploit() {
+        // see https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        await this.waitAndReturn(this._erc20.approve(this.contract.address, 0));
     }
 
     async makeOffer(
