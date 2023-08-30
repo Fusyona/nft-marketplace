@@ -189,17 +189,22 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
         uint256 tokenId,
         uint256 salePrice
     ) private returns (uint256) {
-        if (supportsRoyalties(collection)) {
-            (address creator, uint256 royalty) = royaltyInfo(
-                collection,
-                tokenId,
-                salePrice
-            );
-            payable(creator).transfer(royalty);
-            emit RoyaltyPayment(collection, tokenId, creator, royalty);
-            return royalty;
-        }
-        return 0;
+        if (!supportsRoyalties(collection)) return 0;
+
+        (address creator, uint256 royalty) = royaltyInfo(
+            collection,
+            tokenId,
+            salePrice
+        );
+        payable(creator).transfer(royalty);
+        emit RoyaltyPayment(collection, tokenId, creator, royalty);
+        return royalty;
+    }
+
+    function supportsRoyalties(address collection) public view returns (bool) {
+        bytes4 INTERFACE_ID_ERC2981 = 0x2a55205a;
+        return
+            ERC165Checker.supportsInterface(collection, INTERFACE_ID_ERC2981);
     }
 
     function royaltyInfo(
@@ -209,12 +214,6 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
     ) public view returns (address, uint256) {
         IERC2981 ierc2981 = IERC2981(collection);
         return ierc2981.royaltyInfo(nftId, salePrice);
-    }
-
-    function supportsRoyalties(address collection) public view returns (bool) {
-        bytes4 INTERFACE_ID_ERC2981 = 0x2a55205a;
-        return
-            ERC165Checker.supportsInterface(collection, INTERFACE_ID_ERC2981);
     }
 
     function getFusyonaFeeFor(
