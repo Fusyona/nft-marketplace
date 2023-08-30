@@ -41,7 +41,7 @@
         "web3": "^1.8.1"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "^4.8.3"
+        "@openzeppelin/contracts": "^4.9.3"
     },
     "scripts": {
         "preinstall": "npx only-allow pnpm",
