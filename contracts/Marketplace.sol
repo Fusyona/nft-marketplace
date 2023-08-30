@@ -13,7 +13,7 @@ import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165C
 import {ERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
 import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
-contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder{
+contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder {
     using ABDKMath64x64 for int128;
     using MathFees for int128;
 
@@ -164,35 +164,57 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder{
         uint256 nftId,
         uint256 priceOfTrade
     ) private {
-
-        uint256 royalties = _payRoyalties(collection, nftId, priceOfTrade);
+        uint256 royalties = _payRoyaltiesIfSupported(
+            collection,
+            nftId,
+            priceOfTrade
+        );
         _payingBenefits(seller, priceOfTrade, royalties);
         _safeTransferTo(buyer, collection, nftId);
         emit NFTSold(buyer, seller, collection, nftId, priceOfTrade);
     }
 
-    function _payingBenefits(address seller, uint256 moneyRequired, uint256 royalties) private {
+    function _payingBenefits(
+        address seller,
+        uint256 moneyRequired,
+        uint256 royalties
+    ) private {
         uint256 fusyonaFee = getFusyonaFeeFor(moneyRequired);
         fusyBenefitsAccumulated += fusyonaFee;
         payable(seller).transfer(moneyRequired - fusyonaFee - royalties);
     }
 
-    function _payRoyalties(address collection, uint256 tokenId, uint256 salePrice) private returns(uint256) {
-        require(checkRoyalty(collection), "Marketplace: Royalty not supported");
-        (address creator, uint256 royalty) = royaltyInfo(collection, tokenId, salePrice);
-        payable(creator).transfer(royalty);
-        emit RoyaltyPayment(collection, tokenId, creator, royalty);
-        return royalty;
+    function _payRoyaltiesIfSupported(
+        address collection,
+        uint256 tokenId,
+        uint256 salePrice
+    ) private returns (uint256) {
+        if (supportsRoyalties(collection)) {
+            (address creator, uint256 royalty) = royaltyInfo(
+                collection,
+                tokenId,
+                salePrice
+            );
+            payable(creator).transfer(royalty);
+            emit RoyaltyPayment(collection, tokenId, creator, royalty);
+            return royalty;
+        }
+        return 0;
     }
 
-    function royaltyInfo(address collection, uint256 nftId, uint256 salePrice) public view returns (address, uint256) {
+    function royaltyInfo(
+        address collection,
+        uint256 nftId,
+        uint256 salePrice
+    ) public view returns (address, uint256) {
         IERC2981 ierc2981 = IERC2981(collection);
         return ierc2981.royaltyInfo(nftId, salePrice);
     }
-    
-    function checkRoyalty(address collection) public view returns (bool) {
+
+    function supportsRoyalties(address collection) public view returns (bool) {
         bytes4 INTERFACE_ID_ERC2981 = 0x2a55205a;
-        return ERC165Checker.supportsInterface(collection, INTERFACE_ID_ERC2981);
+        return
+            ERC165Checker.supportsInterface(collection, INTERFACE_ID_ERC2981);
     }
 
     function getFusyonaFeeFor(
@@ -505,8 +527,12 @@ contract Marketplace is IMarketplace, ERC1155Holder, Ownable, ERC721Holder{
 
         nft.listed = false;
         _transferRemainingToSender(offer.price + msg.value, counteroffer.price);
-        
-        uint256 royalties = _payRoyalties(counteroffer.collection, counteroffer.nftId, counteroffer.price);
+
+        uint256 royalties = _payRoyaltiesIfSupported(
+            counteroffer.collection,
+            counteroffer.nftId,
+            counteroffer.price
+        );
         _payingBenefits(seller, counteroffer.price, royalties);
         _safeTransferTo(
             msg.sender,
