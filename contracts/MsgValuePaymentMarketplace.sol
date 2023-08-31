@@ -18,7 +18,8 @@ contract MsgValuePaymentMarketplace is
     }
 
     function _transfer(address to, uint256 amount) internal override {
-        payable(to).transfer(amount);
+        (bool success, ) = to.call{value: amount}("");
+        assert(success);
     }
 
     function _ensureAndGetPaymentFor(
