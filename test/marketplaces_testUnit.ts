@@ -534,7 +534,9 @@ for (const collectionType of ["ERC1155", "ERC721"]) {
                     contract.buy(collectionAddress, nftId, {
                         value: notEnoughAmount,
                     })
-                ).to.be.revertedWith("Marketplace: Sent amount not enough");
+                ).to.be.revertedWith(
+                    "IMsgValuePaymentMarketplace__InsufficientEthReceived"
+                );
             });
         });
 
@@ -1342,7 +1344,9 @@ for (const collectionType of ["ERC1155", "ERC721"]) {
 
                 await expect(
                     marketplace.takeCounteroffer(1, insufficientValueToSend)
-                ).to.be.revertedWith("Marketplace: Sent amount not enough");
+                ).to.be.revertedWith(
+                    "IMsgValuePaymentMarketplace__InsufficientEthReceived"
+                );
             });
 
             it("should emit event CounterofferTaken", async () => {

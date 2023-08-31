@@ -24,7 +24,11 @@ contract MsgValuePaymentMarketplace is
     function _ensureAndGetPaymentFor(
         uint256 amount
     ) internal override returns (uint256) {
-        require(msg.value >= amount, "Marketplace: Sent amount not enough");
+        if (msg.value < amount)
+            revert IMsgValuePaymentMarketplace__InsufficientEthReceived(
+                msg.value,
+                amount
+            );
         return msg.value;
     }
 }

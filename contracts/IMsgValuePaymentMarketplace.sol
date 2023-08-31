@@ -3,6 +3,11 @@ pragma solidity ^0.8.0;
 
 import "./IMarketplace.sol";
 
+error IMsgValuePaymentMarketplace__InsufficientEthReceived(
+    uint256 ethReceived,
+    uint256 minValueToSend
+);
+
 interface IMsgValuePaymentMarketplace is IMarketplace {
     function makeOffer(
         address collection,
