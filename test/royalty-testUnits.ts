@@ -12,7 +12,7 @@ import MarketplaceWrapper from "../scripts/marketplace-wrapper";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 import MsgValuePaymentMarketplaceWrapper from "../scripts/msg-value-payment-marketplace-wrapper";
 import Erc20PaymentMarketplaceWrapper from "../scripts/erc20-payment-marketplace-wrapper";
-import { contractNames } from "../utils/constants";
+import { contractNames, deployArgs } from "../utils/constants";
 
 describe("Royalty support tests", () => {
     const ERROR_MARGIN = 1;
@@ -45,6 +45,14 @@ describe("Royalty support tests", () => {
             contractNames.FusyERC721CollectionWithRoyaltySupport
         );
     });
+
+    function getRoyaltyFromPrice(price: BigNumber) {
+        const _100_BECAUSE_OF_PERCENTAGE = 100;
+        const _100_BECAUSE_OF_2_DECIMALS = 100;
+        const DENOMINATOR =
+            _100_BECAUSE_OF_PERCENTAGE * _100_BECAUSE_OF_2_DECIMALS;
+        return price.mul(deployArgs.ROYALTY_FEE_NUMERATOR).div(DENOMINATOR);
+    }
 
     describe(contractNames.MsgValuePaymentMarketplace, () => {
         let msgValueMarketplaceWrapper: MsgValuePaymentMarketplaceWrapper;
@@ -92,7 +100,7 @@ describe("Royalty support tests", () => {
         }
 
         describe("buy()", () => {
-            const royalty = nftPrice.div(10);
+            const royalty = getRoyaltyFromPrice(nftPrice);
 
             it("should discount royalty from the seller", async () => {
                 const fee = nftPrice.div(50);
@@ -152,7 +160,7 @@ describe("Royalty support tests", () => {
             const offerPrice = nftPrice.sub(2);
             const counterofferPrice = offerPrice.add(1);
             const COUNTER_OFFER_ID = 1;
-            const royalty = counterofferPrice.div(10);
+            const royalty = getRoyaltyFromPrice(counterofferPrice);
 
             beforeEach(async () => {
                 await makeOffer();
@@ -274,7 +282,7 @@ describe("Royalty support tests", () => {
         }
 
         describe("buy()", () => {
-            const royalty = nftPrice.div(10);
+            const royalty = getRoyaltyFromPrice(nftPrice);
 
             it("should discount royalty from the seller", async () => {
                 const fee = nftPrice.div(50);
@@ -333,7 +341,7 @@ describe("Royalty support tests", () => {
             const offerPrice = nftPrice.sub(2);
             const counterofferPrice = offerPrice.add(1);
             const COUNTER_OFFER_ID = 1;
-            const royalty = counterofferPrice.div(10);
+            const royalty = getRoyaltyFromPrice(counterofferPrice);
 
             beforeEach(async () => {
                 await makeOffer();

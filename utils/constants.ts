@@ -7,3 +7,7 @@ export const contractNames = {
     MockERC1155Collection: "MockERC1155Collection",
     MsgValuePaymentMarketplace: "MsgValuePaymentMarketplace",
 };
+
+export const deployArgs = {
+    ROYALTY_FEE_NUMERATOR: 1000,
+};
