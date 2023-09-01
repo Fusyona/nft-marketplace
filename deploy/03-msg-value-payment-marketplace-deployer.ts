@@ -1,18 +1,17 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-
-const CONTRACT_NAME = "MsgValuePaymentMarketplace";
+import { contractNames } from "../utils/constants";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deployments, getNamedAccounts } = hre;
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    await deploy(CONTRACT_NAME, {
+    await deploy(contractNames.MsgValuePaymentMarketplace, {
         from: deployer,
         autoMine: true,
         log: true,
     });
 };
 export default func;
-func.tags = [CONTRACT_NAME];
+func.tags = [contractNames.MsgValuePaymentMarketplace];

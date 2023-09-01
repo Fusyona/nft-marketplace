@@ -12,6 +12,7 @@ import MarketplaceWrapper from "../scripts/marketplace-wrapper";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 import MsgValuePaymentMarketplaceWrapper from "../scripts/msg-value-payment-marketplace-wrapper";
 import Erc20PaymentMarketplaceWrapper from "../scripts/erc20-payment-marketplace-wrapper";
+import { contractNames } from "../utils/constants";
 
 describe("Royalty support tests", () => {
     const ERROR_MARGIN = 1;
@@ -33,19 +34,19 @@ describe("Royalty support tests", () => {
 
     beforeEach(async () => {
         await deployments.fixture([
-            "MockERC721Collection",
-            "FusyERC721CollectionWithRoyaltySupport",
-            "MsgValuePaymentMarketplace",
-            "MockERC20",
-            "Erc20PaymentMarketplace",
+            contractNames.MockERC721Collection,
+            contractNames.FusyERC721CollectionWithRoyaltySupport,
+            contractNames.MsgValuePaymentMarketplace,
+            contractNames.MockERC20,
+            contractNames.Erc20PaymentMarketplace,
         ]);
 
         collectionContractWithERC2981 = await ethers.getContract(
-            "FusyERC721CollectionWithRoyaltySupport"
+            contractNames.FusyERC721CollectionWithRoyaltySupport
         );
     });
 
-    describe("MsgValuePaymentMarketplace", () => {
+    describe(contractNames.MsgValuePaymentMarketplace, () => {
         let msgValueMarketplaceWrapper: MsgValuePaymentMarketplaceWrapper;
 
         beforeEach(async () => {
@@ -63,7 +64,7 @@ describe("Royalty support tests", () => {
 
         async function getMsgValueMarketplaceWrapper() {
             const { address, abi } = await deployments.get(
-                "MsgValuePaymentMarketplace"
+                contractNames.MsgValuePaymentMarketplace
             );
             return new MsgValuePaymentMarketplaceWrapper(
                 address,
@@ -230,12 +231,12 @@ describe("Royalty support tests", () => {
         });
     });
 
-    describe("Erc20PaymentMarketplace", () => {
+    describe(contractNames.Erc20PaymentMarketplace, () => {
         let erc20MarketplaceWrapper: Erc20PaymentMarketplaceWrapper;
         let payToken: IERC20;
 
         beforeEach(async () => {
-            payToken = await ethers.getContract("MockERC20");
+            payToken = await ethers.getContract(contractNames.MockERC20);
             erc20MarketplaceWrapper = await getErc20MarketplaceWrapper();
 
             await mintNft();
@@ -245,7 +246,7 @@ describe("Royalty support tests", () => {
 
         async function getErc20MarketplaceWrapper() {
             const { address, abi } = await deployments.get(
-                "Erc20PaymentMarketplace"
+                contractNames.Erc20PaymentMarketplace
             );
             return new Erc20PaymentMarketplaceWrapper(
                 address,

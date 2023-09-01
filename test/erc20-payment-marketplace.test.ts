@@ -7,6 +7,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import MarketplaceWrapper from "../scripts/marketplace-wrapper";
 import Erc20PaymentMarketplaceWrapper from "../scripts/erc20-payment-marketplace-wrapper";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
+import { contractNames } from "../utils/constants";
 
 describe("Testing Erc20PaymentMarketplace specific features", () => {
     let erc20: IERC20;
@@ -27,16 +28,18 @@ describe("Testing Erc20PaymentMarketplace specific features", () => {
 
     beforeEach(async () => {
         await deployments.fixture([
-            "MockERC20",
-            "Erc20PaymentMarketplace",
-            "MockERC721Collection",
+            contractNames.MockERC20,
+            contractNames.Erc20PaymentMarketplace,
+            contractNames.MockERC721Collection,
         ]);
 
-        const deployment = await deployments.get("Erc20PaymentMarketplace");
+        const deployment = await deployments.get(
+            contractNames.Erc20PaymentMarketplace
+        );
         marketplaceAddress = deployment.address;
 
-        erc20 = await ethers.getContract("MockERC20");
-        erc721 = await ethers.getContract("MockERC721Collection");
+        erc20 = await ethers.getContract(contractNames.MockERC20);
+        erc721 = await ethers.getContract(contractNames.MockERC721Collection);
 
         const signers = await ethers.getSigners();
 

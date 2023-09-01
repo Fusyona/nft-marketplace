@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { contractNames } from "../utils/constants";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deployments, getNamedAccounts } = hre;
@@ -8,7 +9,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const ids = [1, 2, 3, 4, 5];
     const copies = [1, 1, 1, 1, 1];
 
-    await deploy("MockERC1155Collection", {
+    await deploy(contractNames.MockERC1155Collection, {
         from: deployer,
         autoMine: true,
         log: true,
@@ -16,4 +17,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     });
 };
 export default func;
-func.tags = ["MockERC1155Collection"];
+func.tags = [contractNames.MockERC1155Collection];

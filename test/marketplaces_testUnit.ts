@@ -12,12 +12,15 @@ import {
     JsonRpcFetchFunc,
     JsonRpcProvider,
 } from "@ethersproject/providers";
+import { contractNames } from "../utils/constants";
 
 type SignerWithAddress = Signer & { address: Address };
 
-const MARKETPLACE_CONTRACT_NAME = "MsgValuePaymentMarketplace";
+const MARKETPLACE_CONTRACT_NAME = contractNames.MsgValuePaymentMarketplace;
 
 for (const collectionType of ["ERC1155", "ERC721"]) {
+    const COLLECTION_CONTRACT_NAME = `Mock${collectionType}Collection`;
+
     describe(`Testing Marketplace Smart Contract for ${collectionType} Collection`, () => {
         let signer: SignerWithAddress;
         const OWNER_SIGNER_INDEX = 0;
@@ -32,7 +35,7 @@ for (const collectionType of ["ERC1155", "ERC721"]) {
         beforeEach(async () => {
             await deployments.fixture([
                 MARKETPLACE_CONTRACT_NAME,
-                `Mock${collectionType}Collection`,
+                COLLECTION_CONTRACT_NAME,
             ]);
             await setInstances();
             await defaultSigner();
@@ -49,7 +52,7 @@ for (const collectionType of ["ERC1155", "ERC721"]) {
                 MARKETPLACE_CONTRACT_NAME
             );
             mockCollectionDeployment = await deployments.get(
-                `Mock${collectionType}Collection`
+                COLLECTION_CONTRACT_NAME
             );
         }
 
@@ -101,9 +104,9 @@ for (const collectionType of ["ERC1155", "ERC721"]) {
         }
 
         async function getMockCollection() {
-            return (await ethers.getContract(
-                `Mock${collectionType}Collection`
-            )) as IERC1155 | IERC721;
+            return (await ethers.getContract(COLLECTION_CONTRACT_NAME)) as
+                | IERC1155
+                | IERC721;
         }
 
         async function tSafeTransferFrom(
