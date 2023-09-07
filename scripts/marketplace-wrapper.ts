@@ -1,35 +1,74 @@
 import {
     BigNumber,
     Contract,
-    ContractReceipt,
     ContractTransaction,
+    Signer,
     providers,
 } from "ethers";
 import { IMarketplace } from "../typechain-types";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 
-type Address = string;
-type NotUndefined = Exclude<any, undefined>;
+export type Address = string;
+export type NotUndefined = Exclude<any, undefined>;
+export type IMarketplaceView = Pick<
+    IMarketplace,
+    keyof NonTransactionFunctions<IMarketplace["functions"]>
+>;
+type NonTransactionFunctions<T> = Pick<
+    T,
+    {
+        [K in keyof T]: Exclude<
+            T[K],
+            (...args: any[]) => Promise<ContractTransaction>
+        > extends never
+            ? never
+            : K;
+    }[keyof T]
+>;
 
-export default class MarketplaceWrapperForOneSigner {
-    contract: IMarketplace;
+export default abstract class MarketplaceWrapper {
+    protected _contract: IMarketplace;
+    protected provider: providers.Web3Provider;
 
     constructor(
         private contractAddress: Address,
         private contractAbi: NotUndefined,
         provider: ExternalProvider | JsonRpcFetchFunc,
-        signerIndex: number,
         private confirmations: number | undefined = undefined
     ) {
-        const signer = new providers.Web3Provider(provider).getSigner(
-            signerIndex
-        );
-
-        this.contract = new Contract(
+        this.provider = new providers.Web3Provider(provider);
+        this._contract = new Contract(
             this.contractAddress,
-            this.contractAbi,
-            signer
+            this.contractAbi
         ) as IMarketplace;
+
+        this._withSignerIndex(0);
+    }
+
+    private _withSignerIndex(index: number) {
+        const signer = this.provider.getSigner(index);
+        return this._withSigner(signer);
+    }
+
+    private _withSigner(signer: Signer) {
+        this._contract = this._contract.connect(signer);
+        return this;
+    }
+
+    withSignerIndex(index: number) {
+        return this._withSignerIndex(index);
+    }
+
+    withSigner(signer: Signer) {
+        return this._withSigner(signer);
+    }
+
+    get contract() {
+        return this._contract;
+    }
+
+    get call() {
+        return this.contract as IMarketplaceView;
     }
 
     async list(
@@ -42,16 +81,12 @@ export default class MarketplaceWrapperForOneSigner {
         );
     }
 
-    private async waitAndReturn(
+    protected async waitAndReturn(
         transactionPromise: Promise<ContractTransaction>
     ) {
         const transaction = await transactionPromise;
         await transaction.wait(this.confirmations);
         return transaction;
-    }
-
-    async isListed(collectionAddress: string, nftId: BigNumber | number) {
-        return await this.contract.isListed(collectionAddress, nftId);
     }
 
     async totalOfNFTListed() {
@@ -69,41 +104,33 @@ export default class MarketplaceWrapperForOneSigner {
         return await (this.contract as Contract).queryFilter(eventName);
     }
 
-    async getNftInfo(collectionAddress: Address, nftId: BigNumber | number) {
-        return await this.contract.getNftInfo(collectionAddress, nftId);
-    }
-
     async changePriceOf(
         collectionAddress: Address,
         nftId: BigNumber | number,
         newPrice: BigNumber | number
     ) {
-        return await this.contract.changePriceOf(
-            collectionAddress,
-            nftId,
-            newPrice
-        );
-    }
-
-    async buy(collectionAddress: Address, nftId: number | BigNumber) {
-        const nft = await this.getNftInfo(collectionAddress, nftId);
         return await this.waitAndReturn(
-            this.contract.buy(collectionAddress, nftId, { value: nft.price })
+            this.contract.changePriceOf(collectionAddress, nftId, newPrice)
         );
     }
 
-    async makeOffer(
+    async buyAtPrice(collectionAddress: Address, nftId: number | BigNumber) {
+        const nft = await this.call.getNftInfo(collectionAddress, nftId);
+        return await this.buy(collectionAddress, nftId, nft.price);
+    }
+
+    abstract buy(
+        collectionAddress: Address,
+        nftId: number | BigNumber,
+        valueToSent: number | BigNumber
+    ): Promise<ContractTransaction>;
+
+    abstract makeOffer(
         collectionAddress: Address,
         nftId: number | BigNumber,
         offerPrice: number | BigNumber,
         durationInDays: number
-    ) {
-        return await this.waitAndReturn(
-            this.contract.makeOffer(collectionAddress, nftId, durationInDays, {
-                value: offerPrice,
-            })
-        );
-    }
+    ): Promise<ContractTransaction>;
 
     async makeOfferAndGetId(
         collectionAddress: Address,
@@ -111,13 +138,11 @@ export default class MarketplaceWrapperForOneSigner {
         offerPrice: number | BigNumber,
         durationInDays: number
     ) {
-        const offerTx = await this.contract.makeOffer(
+        const offerTx = await this.makeOffer(
             collectionAddress,
             nftId,
-            durationInDays,
-            {
-                value: offerPrice,
-            }
+            offerPrice,
+            durationInDays
         );
         const id = await this.getOfferIdFromTransaction(offerTx);
         return { offerId: id, transaction: offerTx };
@@ -135,20 +160,8 @@ export default class MarketplaceWrapperForOneSigner {
         return offerId;
     }
 
-    async getOffer(
-        collectionAddress: Address,
-        nftId: BigNumber | number,
-        indexOfOfferMapping: BigNumber | number
-    ) {
-        return await this.contract.getOffer(
-            collectionAddress,
-            nftId,
-            indexOfOfferMapping
-        );
-    }
-
     async offersOf(collectionAddress: Address, nftId: number | BigNumber) {
-        const nft = await this.getNftInfo(collectionAddress, nftId);
+        const nft = await this.call.getNftInfo(collectionAddress, nftId);
         return nft.totalOffers;
     }
 
@@ -231,39 +244,20 @@ export default class MarketplaceWrapperForOneSigner {
         return counterofferId;
     }
 
-    async getCounteroffer(
-        collectionAddress: string,
-        nftId: BigNumber | number,
-        offerId: BigNumber | number
-    ) {
-        return await this.contract.getCounteroffer(
-            collectionAddress,
-            nftId,
-            offerId
-        );
+    async takeCounterofferAtPrice(id: BigNumber | number) {
+        const counteroffer = await this.call["getCounteroffer(uint256)"](id);
+        return await this.takeCounteroffer(id, counteroffer.price);
     }
 
-    async takeCounteroffer(
+    abstract takeCounteroffer(
         id: BigNumber | number,
-        valueToSent: BigNumber | number = 0
-    ) {
-        return await this.waitAndReturn(
-            this.contract.takeCounteroffer(id, { value: valueToSent })
-        );
-    }
-
-    async getFusyonaFeeFor(ethersValue: BigNumber | number) {
-        return await this.contract.getFusyonaFeeFor(ethersValue);
-    }
+        valueToSent: BigNumber | number
+    ): Promise<ContractTransaction>;
 
     async setFeeRatioFromPercentage(percentage: number) {
         return await this.waitAndReturn(
             this.contract.setFeeRatioFromPercentage(percentage)
         );
-    }
-
-    async feeRatio() {
-        return await this.contract.feeRatio();
     }
 
     async withdraw() {
@@ -276,19 +270,19 @@ export default class MarketplaceWrapperForOneSigner {
         );
     }
 
-    async floorRatio() {
-        return await this.contract.floorRatio();
+    async getCounterofferFromId(id: BigNumber | number) {
+        return await this.call["getCounteroffer(uint256)"](id);
     }
 
-    async fusyBenefitsAccumulated() {
-        return await this.contract.fusyBenefitsAccumulated();
-    }
-
-    plotUri(receipt: ContractReceipt) {
-        return this.uriScanner(receipt.transactionHash);
-    }
-
-    uriScanner(txHash: string) {
-        return `https://mumbai.polygonscan.com/tx/${txHash}`;
+    async getCounterofferFromOffer(
+        collection: Address,
+        nftId: number | BigNumber,
+        offerId: number | BigNumber
+    ) {
+        return await this.call["getCounteroffer(address,uint256,uint256)"](
+            collection,
+            nftId,
+            offerId
+        );
     }
 }

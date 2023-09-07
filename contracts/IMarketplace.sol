@@ -29,12 +29,6 @@ interface IMarketplace {
 
     function buy(address collection, uint256 tokenId) external payable;
 
-    function makeOffer(
-        address collection,
-        uint256 tokenId,
-        uint64 durationInDays
-    ) external payable;
-
     function getOffer(
         address collection,
         uint256 nftId,
@@ -73,6 +67,10 @@ interface IMarketplace {
         address collection,
         uint256 nftId,
         uint256 offerId
+    ) external view returns (Counteroffer calldata);
+
+    function getCounteroffer(
+        uint256 counterofferId
     ) external view returns (Counteroffer calldata);
 
     struct Counteroffer {
