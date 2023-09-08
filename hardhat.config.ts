@@ -6,10 +6,11 @@ import "@typechain/hardhat";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-web3";
+import "@nomiclabs/hardhat-etherscan";
 import dotenv from "dotenv";
 dotenv.config();
 
-const { PRIVATE_KEY, INFURA_API_KEY } = process.env;
+const { PRIVATE_KEY, INFURA_API_KEY, MUMBAI_SCAN_KEY } = process.env;
 
 const config: HardhatUserConfig = {
     solidity: "0.8.18",
@@ -17,7 +18,10 @@ const config: HardhatUserConfig = {
         deployer: 0,
         someOtherAccount: 1,
         seller: 2,
-        buyer: 3,
+        buyer: {
+            default: 3,
+            nebula: 0,
+        },
         creator: 4,
     },
     defaultNetwork: "hardhat",
@@ -26,7 +30,12 @@ const config: HardhatUserConfig = {
         mumbai: {
             chainId: 80001,
             url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
-            accounts: [process.env.PRIVATE_KEY!],
+            accounts: [PRIVATE_KEY!],
+        },
+        nebula: {
+            chainId: 503129905,
+            url: "https://staging-v3.skalenodes.com/v1/staging-faint-slimy-achird",
+            accounts: [PRIVATE_KEY!],
         },
     },
     gasReporter: {
@@ -38,6 +47,22 @@ const config: HardhatUserConfig = {
         token: "MATIC",
         gasPriceApi:
             "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
+    },
+    etherscan: {
+        apiKey: {
+            nebula: MUMBAI_SCAN_KEY!,
+        },
+        customChains: [
+            {
+                network: "nebula",
+                chainId: 503129905,
+                urls: {
+                    apiURL: "https://staging-faint-slimy-achird.explorer.staging-v3.skalenodes.com/api",
+                    browserURL:
+                        "https://staging-faint-slimy-achird.explorer.staging-v3.skalenodes.com",
+                },
+            },
+        ],
     },
 };
 
