@@ -1,13 +1,13 @@
 import { network } from "hardhat";
 import { Address } from "hardhat-deploy/types";
 
-export interface networkConfigItem {
+export interface NetworkConfigItem {
     blockConfirmations?: number;
     paymentTokenAddress?: Address;
 }
 
-export interface networkConfigInfo {
-    [key: string]: networkConfigItem;
+export interface NetworkConfigInfo {
+    [key: string]: NetworkConfigItem;
 }
 
 export function isDevelopmentNetwork() {
@@ -15,13 +15,13 @@ export function isDevelopmentNetwork() {
     return developmentNetworks.includes(network.name);
 }
 
-export function getFromNetworkConfig<K extends keyof networkConfigItem>(
+export function getFromNetworkConfig<K extends keyof NetworkConfigItem>(
     key: K
 ) {
     return networkConfig[network.name]?.[key];
 }
 
-const networkConfig: networkConfigInfo = {
+const networkConfig: NetworkConfigInfo = {
     localhost: {},
     hardhat: {},
     nebula: {
