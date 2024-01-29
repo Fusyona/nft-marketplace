@@ -29,6 +29,7 @@ type NonTransactionFunctions<T> = Pick<
 export default abstract class MarketplaceWrapper {
     protected _contract: IMarketplace;
     protected provider: providers.Web3Provider;
+    protected signer?: Signer;
 
     constructor(
         private contractAddress: Address,
@@ -46,8 +47,8 @@ export default abstract class MarketplaceWrapper {
     }
 
     private _withSignerIndex(index: number) {
-        const signer = this.provider.getSigner(index);
-        return this._withSigner(signer);
+        this.signer = this.provider.getSigner(index);
+        return this._withSigner(this.signer);
     }
 
     private _withSigner(signer: Signer) {
