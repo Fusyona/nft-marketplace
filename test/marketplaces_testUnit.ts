@@ -2023,5 +2023,25 @@ for (const collectionType of ["ERC1155", "ERC721"]) {
                 );
             });
         });
+
+        describe("ApproveAndList function tests", () => {
+            it("should approve and list an NFT", async () => {
+                const nftId = 1;
+                const price = ethers.utils.parseEther("1");
+                const collectionAddress = mockCollectionDeployment.address;
+                const signerIdx = 0;
+
+                let marketplace = getMarketplaceFromSignerIndex(signerIdx);
+                await marketplace
+                    .withSignerIndex(signerIdx)
+                    .approveAndList(collectionAddress, nftId, price);
+
+                const nftInfo = await marketplace.call.getNftInfo(
+                    collectionAddress,
+                    nftId
+                );
+                expect(nftInfo.listed).to.be.true;
+            });
+        });
     });
 }

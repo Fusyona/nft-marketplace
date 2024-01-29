@@ -29,6 +29,7 @@ type NonTransactionFunctions<T> = Pick<
 export default abstract class MarketplaceWrapper {
     protected _contract: IMarketplace;
     protected provider: providers.Web3Provider;
+    protected signer?: Signer;
 
     constructor(
         private contractAddress: Address,
@@ -46,8 +47,8 @@ export default abstract class MarketplaceWrapper {
     }
 
     private _withSignerIndex(index: number) {
-        const signer = this.provider.getSigner(index);
-        return this._withSigner(signer);
+        this.signer = this.provider.getSigner(index);
+        return this._withSigner(this.signer);
     }
 
     private _withSigner(signer: Signer) {
@@ -284,5 +285,59 @@ export default abstract class MarketplaceWrapper {
             nftId,
             offerId
         );
+    }
+
+    async approveAndList(
+        collectionAddress: Address,
+        nftId: number | BigNumber,
+        price: BigNumber | number
+    ) {
+        await this.approveNftSpend(collectionAddress, nftId);
+        return await this.waitAndReturn(
+            this.contract.list(collectionAddress, nftId, price)
+        );
+    }
+
+    private async approveNftSpend(
+        collectionAddress: string,
+        nftId: number | BigNumber
+    ) {
+        const collection = this.getCollectionContract(collectionAddress);
+        if (await this.isErc721(collection))
+            return await this.waitAndReturn(
+                collection.approve(this.contract.address, nftId)
+            );
+        else if (await this.isErc1155(collection))
+            return await this.waitAndReturn(
+                collection.setApprovalForAll(this.contract.address, true)
+            );
+        throw new Error("Collection is not ERC721 or ERC1155");
+    }
+
+    private getCollectionContract(collectionAddress: Address) {
+        return new Contract(
+            collectionAddress,
+            [
+                "function supportsInterface(bytes4 interfaceID) external view returns (bool)",
+                "function approve(address to, uint256 tokenId) public",
+                "function setApprovalForAll(address operator, bool approved) public",
+            ],
+            this.signerOrProvider()
+        );
+    }
+
+    private signerOrProvider() {
+        if (typeof this.signer !== "undefined") return this.signer;
+        return this.provider;
+    }
+
+    private async isErc721(collection: Contract) {
+        const ERC721_INTERFACE_ID = "0x80ac58cd";
+        return await collection.supportsInterface(ERC721_INTERFACE_ID);
+    }
+
+    private async isErc1155(collection: Contract) {
+        const ERC1155_INTERFACE_ID = "0xd9b67a26";
+        return await collection.supportsInterface(ERC1155_INTERFACE_ID);
     }
 }
