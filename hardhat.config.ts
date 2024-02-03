@@ -32,7 +32,7 @@ const config: HardhatUserConfig = {
             url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
             accounts: [PRIVATE_KEY!],
         },
-        nebula: {
+        nebulaTestnet: {
             chainId: 503129905,
             url: "https://staging-v3.skalenodes.com/v1/staging-faint-slimy-achird",
             accounts: [PRIVATE_KEY!],
