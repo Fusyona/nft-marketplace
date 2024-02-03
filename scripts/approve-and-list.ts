@@ -18,13 +18,30 @@ async function main() {
         erc20Artifact.abi,
         web3.currentProvider as JsonRpcFetchFunc | ExternalProvider
     );
-    console.log(
-        await marketplaceWrapper.approveAndList(
-            "0x9777C1cf48d8FaB1929c9776619b9F1599187FF0",
-            4,
-            parseEther("0.001")
-        )
-    );
+    const priceOfNft: Record<number, string> = {
+        11: "3",
+        12: "3",
+        13: "3",
+        14: "3",
+        15: "30",
+        16: "3",
+        17: "3.5",
+        18: "4",
+        19: "1",
+        20: "5",
+    };
+    for (const tokenId in priceOfNft) {
+        console.log("=== Approving and listing token", tokenId);
+
+        const tokenIdInt = parseInt(tokenId);
+        console.log(
+            await marketplaceWrapper.approveAndList(
+                "0x9777C1cf48d8FaB1929c9776619b9F1599187FF0",
+                tokenIdInt,
+                parseEther(priceOfNft[tokenIdInt])
+            )
+        );
+    }
 }
 
 main()
