@@ -6,6 +6,7 @@ export const contractNames = {
     MockERC721Collection: "MockERC721Collection",
     MockERC1155Collection: "MockERC1155Collection",
     MsgValuePaymentMarketplace: "MsgValuePaymentMarketplace",
+    NebulaFaucet: "NebulaFaucet",
 };
 
 export const deployArgs = {
