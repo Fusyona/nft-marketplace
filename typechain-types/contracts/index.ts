@@ -11,3 +11,4 @@ export type { MockERC1155Collection } from "./MockERC1155Collection";
 export type { MockERC20 } from "./MockERC20";
 export type { MockERC721Collection } from "./MockERC721Collection";
 export type { MsgValuePaymentMarketplace } from "./MsgValuePaymentMarketplace";
+export type { NebulaFaucet } from "./NebulaFaucet";
