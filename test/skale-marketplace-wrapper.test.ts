@@ -29,7 +29,7 @@ describe("SkaleMarketplaceWrapper", () => {
             contractNames.NebulaFaucet,
         ]);
 
-        funder = ethers.Wallet.createRandom().connect(ethers.provider);
+        funder = ethers.Wallet.createRandom().connect(provider);
 
         marketplaceWrapper = await getMarketplaceWrapperFromFaucetCaller(
             funder
