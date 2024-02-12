@@ -1,4 +1,9 @@
-import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
+import {
+    ExternalProvider,
+    JsonRpcFetchFunc,
+    JsonRpcSigner,
+    TransactionResponse,
+} from "@ethersproject/providers";
 import { deployments, web3, ethers } from "hardhat";
 import SkaleMarketplaceWrapper from "../scripts/skale-marketplace-wrapper";
 import { expect } from "chai";
@@ -8,14 +13,14 @@ import { BigNumber, Signer, Wallet, constants } from "ethers";
 import assert from "assert";
 import { Address } from "hardhat-deploy/types";
 import { parseEther } from "ethers/lib/utils";
-import { NebulaFaucet } from "../typechain-types";
 import { waitAndReturn } from "../utils/transactions";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("SkaleMarketplaceWrapper", () => {
     let marketplaceWrapper: SkaleMarketplaceWrapper;
     const provider = ethers.provider;
-    let faucetCaller: Wallet;
-    const faucetReward = parseEther("1");
+    let funder: Wallet;
+    const fundingAmount = parseEther("1");
 
     beforeEach(async () => {
         await deployments.fixture([
@@ -24,18 +29,18 @@ describe("SkaleMarketplaceWrapper", () => {
             contractNames.NebulaFaucet,
         ]);
 
-        faucetCaller = ethers.Wallet.createRandom().connect(ethers.provider);
+        funder = ethers.Wallet.createRandom().connect(ethers.provider);
 
         marketplaceWrapper = await getMarketplaceWrapperFromFaucetCaller(
-            faucetCaller
+            funder
         );
 
-        await setFaucetReward(faucetReward);
+        marketplaceWrapper.fundingAmount = fundingAmount;
 
-        await fundFaucetCaller(faucetCaller);
+        await fundFaucetCaller(funder);
 
         const faucetAddress = await getFaucetAddress();
-        await fundFaucet(faucetAddress, faucetCaller);
+        await fundFaucet(faucetAddress, funder);
     });
 
     async function getMarketplaceWrapperFromFaucetCaller(faucetCaller: Wallet) {
@@ -44,7 +49,6 @@ describe("SkaleMarketplaceWrapper", () => {
         const { address: erc20Address, abi: erc20Abi } = await getDeployment(
             contractNames.MockERC20
         );
-        const faucetAddress = await getFaucetAddress();
 
         const provider = web3.currentProvider as
             | ExternalProvider
@@ -55,7 +59,6 @@ describe("SkaleMarketplaceWrapper", () => {
             marketplaceAbi,
             erc20Address,
             erc20Abi,
-            faucetAddress,
             faucetCaller.privateKey,
             provider
         );
@@ -74,20 +77,12 @@ describe("SkaleMarketplaceWrapper", () => {
         return faucetAddress;
     }
 
-    async function setFaucetReward(newReward: BigNumber) {
-        const { deployer } = await ethers.getNamedSigners();
-        const faucet = (await ethers.getContract(
-            contractNames.NebulaFaucet
-        )) as NebulaFaucet;
-        await waitAndReturn(faucet.connect(deployer).updateAmount(newReward));
-    }
-
     async function fundFaucetCaller(faucetCaller: Wallet) {
         const { deployer } = await ethers.getNamedSigners();
         await waitAndReturn(
             deployer.sendTransaction({
                 to: faucetCaller.address,
-                value: faucetReward.mul(1000),
+                value: fundingAmount.mul(1000),
             })
         );
     }
@@ -96,7 +91,7 @@ describe("SkaleMarketplaceWrapper", () => {
         await waitAndReturn(
             faucetCaller.sendTransaction({
                 to: faucetAddress,
-                value: faucetReward.mul(100),
+                value: fundingAmount.mul(100),
             })
         );
     }
@@ -109,7 +104,7 @@ describe("SkaleMarketplaceWrapper", () => {
     });
 
     it("should call marketplace non-readonly method even if user hasn't sFUEL", async () => {
-        await makeDefaultUserBalanceToBe0();
+        await makeDeployerUserBalanceToBe0();
 
         await marketplaceWrapper.ensureSFuelAndDo((w) =>
             w.setFeeRatioFromPercentage(3)
@@ -121,32 +116,34 @@ describe("SkaleMarketplaceWrapper", () => {
         expect(feeRatio).to.equal(toABDKMath64x64(3));
     });
 
-    async function makeDefaultUserBalanceToBe0() {
-        const { deployer: defaultUser } = await ethers.getNamedSigners();
+    async function makeDeployerUserBalanceToBe0() {
+        const { deployer } = await ethers.getNamedSigners();
 
-        await reduceBalanceTo(defaultUser, BigNumber.from(0));
+        await reduceBalanceTo(deployer, BigNumber.from(0));
 
-        const afterBurningBalance = await defaultUser.getBalance();
+        const afterBurningBalance = await deployer.getBalance();
         assert(afterBurningBalance.isZero());
     }
 
-    it("should get sFUEL for faucetCaller if he has < faucet/100 reward", async () => {
-        const lessThanRewardDiv100 = faucetReward.div(100).sub(1);
-        await reduceBalanceTo(faucetCaller, lessThanRewardDiv100);
+    it("should not get sFUEL for faucetCaller if he has < fundingAmount/100", async () => {
+        const lessThanRewardDiv100 = fundingAmount.div(100).sub(1);
+        await reduceBalanceTo(funder, lessThanRewardDiv100);
 
         await marketplaceWrapper.ensureSFuelAndDo((w) =>
             w.setFeeRatioFromPercentage(3)
         );
 
-        const minBalanceAfterFaucetPaid = faucetReward;
-        expect((await faucetCaller.getBalance()).gte(minBalanceAfterFaucetPaid))
-            .to.be.true;
+        const minBalanceAfterFaucetPaid = fundingAmount;
+        expect(await funder.getBalance()).to.be.lt(minBalanceAfterFaucetPaid);
     });
 
     async function reduceBalanceTo(signer: Signer, desiredBalance: BigNumber) {
         const balance = await signer.getBalance();
         const gasPrice = await provider.getGasPrice();
-        const gasLimit = ethers.utils.hexlify(21000); // Standard gas limit for ETH transfer
+        const STANDARD_GAS_LIMIT_FOR_ETH_TRANSFER = 21000;
+        const gasLimit = ethers.utils.hexlify(
+            STANDARD_GAS_LIMIT_FOR_ETH_TRANSFER
+        );
         const totalGasCost = gasPrice.mul(gasLimit);
         const amountToBurn = balance.sub(desiredBalance).sub(totalGasCost);
 
@@ -160,15 +157,61 @@ describe("SkaleMarketplaceWrapper", () => {
         );
     }
 
-    it("should not get sFUEL for faucetCaller if he has >= faucet reward", async () => {
-        await reduceBalanceTo(faucetCaller, faucetReward);
+    it("should not get sFUEL for faucetCaller if he has >= funding amount", async () => {
+        await reduceBalanceTo(funder, fundingAmount);
 
         await marketplaceWrapper.ensureSFuelAndDo((w) =>
             w.setFeeRatioFromPercentage(3)
         );
 
-        const faucetCallerBalance = await faucetCaller.getBalance();
-        const minBalanceAfterFaucetPaid = faucetReward;
+        const faucetCallerBalance = await funder.getBalance();
+        const minBalanceAfterFaucetPaid = fundingAmount;
         expect(faucetCallerBalance.lte(minBalanceAfterFaucetPaid)).to.be.true;
     });
+
+    it("should transfer `user's balance - wrapper.fundigAmount()` from funder to user if later has < funding amount", async () => {
+        const BALANCE_MINUS_FUNDING_AMOUNT = 100;
+        const lessThanFundingAmount = fundingAmount.sub(
+            BALANCE_MINUS_FUNDING_AMOUNT
+        );
+        const { deployer: connectedAddress } = await ethers.getNamedSigners();
+        await reduceBalanceTo(connectedAddress, lessThanFundingAmount);
+
+        await marketplaceWrapper
+            .withSigner(connectedAddress as unknown as JsonRpcSigner)
+            .ensureSFuelAndDo((w) => w.setFeeRatioFromPercentage(3));
+
+        const trxs = await getPreviousBlockTrxs();
+
+        expect(trxs.length).to.equal(1);
+
+        const [{ from, to, value }] = trxs;
+        expect(from).to.equal(funder.address);
+        expect(to).to.equal(connectedAddress.address);
+        expect(value).to.equal(BALANCE_MINUS_FUNDING_AMOUNT);
+    });
+
+    async function getPreviousBlockTrxs() {
+        return provider
+            .getBlockWithTransactions((await time.latestBlock()) - 1)
+            .then((b) => b.transactions);
+    }
+
+    it("should not transfer anything from funder to user if user has >= funding amount", async () => {
+        const { deployer: connectedSigner } = await ethers.getNamedSigners();
+        await marketplaceWrapper
+            .withSigner(connectedSigner as unknown as JsonRpcSigner)
+            .ensureSFuelAndDo((w) => w.setFeeRatioFromPercentage(3));
+
+        const trxs = await getPreviousBlockTrxs();
+
+        expectNoneFromFunderTo(trxs, connectedSigner.address);
+    });
+
+    function expectNoneFromFunderTo(trxs: TransactionResponse[], to: Address) {
+        for (const t of trxs) {
+            if (t.from === funder.address && t.to === to)
+                expect(true).to.be.false;
+        }
+    }
 });
