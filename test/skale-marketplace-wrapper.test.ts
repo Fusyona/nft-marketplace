@@ -39,9 +39,11 @@ describe("SkaleMarketplaceWrapper", () => {
     });
 
     async function getMarketplaceWrapperFromFaucetCaller(faucetCaller: Wallet) {
-        const { marketplaceAddress, marketplaceAbi } =
-            await getMarketplaceDeployment();
-        const { erc20Address, erc20Abi } = await getErc20Deployment();
+        const { address: marketplaceAddress, abi: marketplaceAbi } =
+            await getDeployment(contractNames.Erc20PaymentMarketplace);
+        const { address: erc20Address, abi: erc20Abi } = await getDeployment(
+            contractNames.MockERC20
+        );
         const faucetAddress = await getFaucetAddress();
 
         const provider = web3.currentProvider as
@@ -59,19 +61,10 @@ describe("SkaleMarketplaceWrapper", () => {
         );
     }
 
-    async function getMarketplaceDeployment() {
-        const marketplaceDeployment = await deployments.get(
-            contractNames.Erc20PaymentMarketplace
-        );
-        const { address: marketplaceAddress, abi: marketplaceAbi } =
-            marketplaceDeployment;
-        return { marketplaceAddress, marketplaceAbi };
-    }
-
-    async function getErc20Deployment() {
-        const erc20Deployment = await deployments.get(contractNames.MockERC20);
-        const { address: erc20Address, abi: erc20Abi } = erc20Deployment;
-        return { erc20Address, erc20Abi };
+    async function getDeployment(contractName: string) {
+        const deployment = await deployments.get(contractName);
+        const { address, abi } = deployment;
+        return { address, abi };
     }
 
     async function getFaucetAddress() {
