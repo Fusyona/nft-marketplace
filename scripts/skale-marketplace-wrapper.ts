@@ -62,7 +62,8 @@ export default class SkaleMarketplaceWrapper {
 
     private async fundUserIfNecessary() {
         const userBalance = await this.signer.getBalance();
-        if (userBalance.lt(this.fundingAmount)) {
+        const threshold = this.fundingAmount.div(100);
+        if (userBalance.lt(threshold)) {
             await this.getSFuelFor(this.signer);
         }
     }
