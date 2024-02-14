@@ -169,13 +169,13 @@ describe("SkaleMarketplaceWrapper", () => {
         expect(faucetCallerBalance.lte(minBalanceAfterFaucetPaid)).to.be.true;
     });
 
-    it("should transfer `user's balance - wrapper.fundigAmount()` from funder to user if later has < funding amount", async () => {
-        const BALANCE_MINUS_FUNDING_AMOUNT = 100;
-        const lessThanFundingAmount = fundingAmount.sub(
-            BALANCE_MINUS_FUNDING_AMOUNT
-        );
+    it("should transfer `wrapper.fundigAmount() - user's balance` from funder to user if later has < fundingAmount/100", async () => {
+        const threshold = fundingAmount.div(100);
+        const lessThanFundingThreshold = threshold.sub(1);
         const { deployer: connectedAddress } = await ethers.getNamedSigners();
-        await reduceBalanceTo(connectedAddress, lessThanFundingAmount);
+
+        const userBalance = lessThanFundingThreshold;
+        await reduceBalanceTo(connectedAddress, userBalance);
 
         await marketplaceWrapper
             .withSigner(connectedAddress as unknown as JsonRpcSigner)
@@ -188,7 +188,7 @@ describe("SkaleMarketplaceWrapper", () => {
         const [{ from, to, value }] = trxs;
         expect(from).to.equal(funder.address);
         expect(to).to.equal(connectedAddress.address);
-        expect(value).to.equal(BALANCE_MINUS_FUNDING_AMOUNT);
+        expect(value).to.equal(fundingAmount.sub(userBalance));
     });
 
     async function getPreviousBlockTrxs() {
@@ -197,8 +197,12 @@ describe("SkaleMarketplaceWrapper", () => {
             .then((b) => b.transactions);
     }
 
-    it("should not transfer anything from funder to user if user has >= funding amount", async () => {
+    it("should not transfer anything from funder to user if user has fundingAmount/100", async () => {
         const { deployer: connectedSigner } = await ethers.getNamedSigners();
+        const threshold = fundingAmount.div(100);
+
+        await reduceBalanceTo(connectedSigner, threshold);
+
         await marketplaceWrapper
             .withSigner(connectedSigner as unknown as JsonRpcSigner)
             .ensureSFuelAndDo((w) => w.setFeeRatioFromPercentage(3));
@@ -214,4 +218,31 @@ describe("SkaleMarketplaceWrapper", () => {
                 expect(true).to.be.false;
         }
     }
+
+    it("should not transfer anything from funder to user if user has fundingAmount/100+1", async () => {
+        const { deployer: connectedSigner } = await ethers.getNamedSigners();
+        const threshold = fundingAmount.div(100);
+        const moreThanFundingThreshold = threshold.add(1);
+
+        await reduceBalanceTo(connectedSigner, moreThanFundingThreshold);
+
+        await marketplaceWrapper
+            .withSigner(connectedSigner as unknown as JsonRpcSigner)
+            .ensureSFuelAndDo((w) => w.setFeeRatioFromPercentage(3));
+
+        const trxs = await getPreviousBlockTrxs();
+
+        expectNoneFromFunderTo(trxs, connectedSigner.address);
+    });
+
+    it("should not transfer anything from funder to user if user has >= funding amount", async () => {
+        const { deployer: connectedSigner } = await ethers.getNamedSigners();
+        await marketplaceWrapper
+            .withSigner(connectedSigner as unknown as JsonRpcSigner)
+            .ensureSFuelAndDo((w) => w.setFeeRatioFromPercentage(3));
+
+        const trxs = await getPreviousBlockTrxs();
+
+        expectNoneFromFunderTo(trxs, connectedSigner.address);
+    });
 });
