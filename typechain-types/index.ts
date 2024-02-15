@@ -84,3 +84,5 @@ export type { MockERC721Collection } from "./contracts/MockERC721Collection";
 export { MockERC721Collection__factory } from "./factories/contracts/MockERC721Collection__factory";
 export type { MsgValuePaymentMarketplace } from "./contracts/MsgValuePaymentMarketplace";
 export { MsgValuePaymentMarketplace__factory } from "./factories/contracts/MsgValuePaymentMarketplace__factory";
+export type { NebulaFaucet } from "./contracts/NebulaFaucet";
+export { NebulaFaucet__factory } from "./factories/contracts/NebulaFaucet__factory";

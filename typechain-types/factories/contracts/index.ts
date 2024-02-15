@@ -11,3 +11,4 @@ export { MockERC1155Collection__factory } from "./MockERC1155Collection__factory
 export { MockERC20__factory } from "./MockERC20__factory";
 export { MockERC721Collection__factory } from "./MockERC721Collection__factory";
 export { MsgValuePaymentMarketplace__factory } from "./MsgValuePaymentMarketplace__factory";
+export { NebulaFaucet__factory } from "./NebulaFaucet__factory";
