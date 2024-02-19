@@ -8,13 +8,15 @@ import Erc20PaymentMarketplaceWrapper from "./erc20-payment-marketplace-wrapper"
 import { BigNumber, Signer, Wallet, providers } from "ethers";
 import { waitAndReturn } from "../utils/transactions";
 
+const SFUEL_ENOUGH_FOR_1K_TRXS = BigNumber.from("10000000000000");
+
 export default class SkaleMarketplaceWrapper {
     private erc20MarketplaceWrapper: Erc20PaymentMarketplaceWrapper;
     private provider: providers.Web3Provider;
     private signer!: JsonRpcSigner;
     private funder: Wallet;
 
-    fundingAmount = BigNumber.from("100000000000000");
+    fundingAmount = SFUEL_ENOUGH_FOR_1K_TRXS;
 
     constructor(
         marketplaceAddress: Address,
@@ -62,7 +64,7 @@ export default class SkaleMarketplaceWrapper {
 
     private async fundUserIfNecessary() {
         const userBalance = await this.signer.getBalance();
-        const threshold = this.fundingAmount.div(100);
+        const threshold = this.fundingAmount.div(10);
         if (userBalance.lt(threshold)) {
             await this.getSFuelFor(this.signer);
         }
