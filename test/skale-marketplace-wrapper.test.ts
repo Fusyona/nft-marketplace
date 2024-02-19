@@ -125,9 +125,9 @@ describe("SkaleMarketplaceWrapper", () => {
         assert(afterBurningBalance.isZero());
     }
 
-    it("should not get sFUEL for faucetCaller if he has < fundingAmount/100", async () => {
-        const lessThanRewardDiv100 = fundingAmount.div(100).sub(1);
-        await reduceBalanceTo(funder, lessThanRewardDiv100);
+    it("should not get sFUEL for faucetCaller if he has < fundingAmount/10", async () => {
+        const lessThanRewardDiv10 = fundingAmount.div(10).sub(1);
+        await reduceBalanceTo(funder, lessThanRewardDiv10);
 
         await marketplaceWrapper.ensureSFuelAndDo((w) =>
             w.setFeeRatioFromPercentage(3)
@@ -169,8 +169,8 @@ describe("SkaleMarketplaceWrapper", () => {
         expect(faucetCallerBalance.lte(minBalanceAfterFaucetPaid)).to.be.true;
     });
 
-    it("should transfer `wrapper.fundigAmount() - user's balance` from funder to user if later has < fundingAmount/100", async () => {
-        const threshold = fundingAmount.div(100);
+    it("should transfer `wrapper.fundigAmount() - user's balance` from funder to user if later has < fundingAmount/10", async () => {
+        const threshold = fundingAmount.div(10);
         const lessThanFundingThreshold = threshold.sub(1);
         const { deployer: connectedAddress } = await ethers.getNamedSigners();
 
@@ -197,9 +197,9 @@ describe("SkaleMarketplaceWrapper", () => {
             .then((b) => b.transactions);
     }
 
-    it("should not transfer anything from funder to user if user has fundingAmount/100", async () => {
+    it("should not transfer anything from funder to user if user has fundingAmount/10", async () => {
         const { deployer: connectedSigner } = await ethers.getNamedSigners();
-        const threshold = fundingAmount.div(100);
+        const threshold = fundingAmount.div(10);
 
         await reduceBalanceTo(connectedSigner, threshold);
 
@@ -219,9 +219,9 @@ describe("SkaleMarketplaceWrapper", () => {
         }
     }
 
-    it("should not transfer anything from funder to user if user has fundingAmount/100+1", async () => {
+    it("should not transfer anything from funder to user if user has fundingAmount/10+1", async () => {
         const { deployer: connectedSigner } = await ethers.getNamedSigners();
-        const threshold = fundingAmount.div(100);
+        const threshold = fundingAmount.div(10);
         const moreThanFundingThreshold = threshold.add(1);
 
         await reduceBalanceTo(connectedSigner, moreThanFundingThreshold);
@@ -244,5 +244,13 @@ describe("SkaleMarketplaceWrapper", () => {
         const trxs = await getPreviousBlockTrxs();
 
         expectNoneFromFunderTo(trxs, connectedSigner.address);
+    });
+
+    it("should have 0.00001 has default value for fundingAmount", async () => {
+        const defaultMarketplaceWrapper =
+            await getMarketplaceWrapperFromFaucetCaller(funder);
+        expect(defaultMarketplaceWrapper.fundingAmount).to.equal(
+            parseEther("0.00001")
+        );
     });
 });
