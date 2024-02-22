@@ -10,12 +10,16 @@ import "@nomiclabs/hardhat-etherscan";
 import dotenv from "dotenv";
 dotenv.config();
 
-const { PRIVATE_KEY, INFURA_API_KEY, MUMBAI_SCAN_KEY } = process.env;
+const { ACCOUNT, PRIVATE_KEY, INFURA_API_KEY, MUMBAI_SCAN_KEY } = process.env;
 
 const config: HardhatUserConfig = {
     solidity: "0.8.18",
     namedAccounts: {
-        deployer: 0,
+        deployer: {
+            default: ACCOUNT ? ACCOUNT : "0x16c7C5849A6769d58F9df6A26960F3293EF379e0",
+            hardhat: 0,
+            localhost: 0,
+        },
         someOtherAccount: 1,
         seller: 2,
         buyer: {
@@ -32,9 +36,14 @@ const config: HardhatUserConfig = {
             url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
             accounts: [PRIVATE_KEY!],
         },
+        nebula: {
+            chainId: 1482601649,
+            url: "https://mainnet.skalenodes.com/v1/green-giddy-denebola",
+            accounts: [PRIVATE_KEY!],
+        },
         nebulaTestnet: {
-            chainId: 503129905,
-            url: "https://staging-v3.skalenodes.com/v1/staging-faint-slimy-achird",
+            chainId: 37084624,
+            url: "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet",
             accounts: [PRIVATE_KEY!],
         },
     },
@@ -55,11 +64,18 @@ const config: HardhatUserConfig = {
         customChains: [
             {
                 network: "nebula",
-                chainId: 503129905,
+                chainId: 1482601649,
                 urls: {
-                    apiURL: "https://staging-faint-slimy-achird.explorer.staging-v3.skalenodes.com/api",
-                    browserURL:
-                        "https://staging-faint-slimy-achird.explorer.staging-v3.skalenodes.com",
+                    apiURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/api",
+                    browserURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/",
+                },
+            },
+            {
+                network: "nebulaTestnet",
+                chainId: 37084624,
+                urls: {
+                    apiURL: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/api",
+                    browserURL: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/",
                 },
             },
         ],
