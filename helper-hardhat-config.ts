@@ -25,6 +25,9 @@ export function getFromNetworkConfig<K extends keyof NetworkConfigItem>(
 const networkConfig: NetworkConfigInfo = {
     localhost: {},
     hardhat: {},
+    nebula: {
+        paymentTokenAddress: "0xCC205196288B7A26f6D43bBD68AaA98dde97276d",
+    },
     nebulaTestnet: {
         paymentTokenAddress: "0xd392bb3254CEa5E0B30B66e345a47940690E8577",
         erc20MarketplaceAddress: "0x59813D10D151F015fF18ffb24Fc40a8762a4f489",
