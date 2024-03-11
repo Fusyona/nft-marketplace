@@ -20,7 +20,7 @@ const config: HardhatUserConfig = {
         seller: 2,
         buyer: {
             default: 3,
-            nebula: 0,
+            nebulaTestnet: 0,
         },
         creator: 4,
     },
@@ -33,8 +33,8 @@ const config: HardhatUserConfig = {
             accounts: [PRIVATE_KEY!],
         },
         nebulaTestnet: {
-            chainId: 503129905,
-            url: "https://staging-v3.skalenodes.com/v1/staging-faint-slimy-achird",
+            chainId: 37084624,
+            url: "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet",
             accounts: [PRIVATE_KEY!],
         },
     },
