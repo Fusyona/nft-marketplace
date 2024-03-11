@@ -19,16 +19,16 @@ async function main() {
         web3.currentProvider as JsonRpcFetchFunc | ExternalProvider
     );
     const priceOfNft: Record<number, string> = {
-        11: "3",
-        12: "3",
-        13: "3",
-        14: "3",
-        15: "30",
-        16: "3",
-        17: "3.5",
-        18: "4",
-        19: "1",
-        20: "5",
+        11: "2",
+        12: "2",
+        13: "2.00001",
+        14: "2",
+        15: "2",
+        16: "2",
+        17: "2",
+        18: "0.1343434",
+        19: "2",
+        20: "3",
     };
     for (const tokenId in priceOfNft) {
         console.log("=== Approving and listing token", tokenId);
@@ -36,7 +36,7 @@ async function main() {
         const tokenIdInt = parseInt(tokenId);
         console.log(
             await marketplaceWrapper.approveAndList(
-                "0x9777C1cf48d8FaB1929c9776619b9F1599187FF0",
+                "0xc45859F134CF41ADa4379a64023DC940FF94081B",
                 tokenIdInt,
                 parseEther(priceOfNft[tokenIdInt])
             )
