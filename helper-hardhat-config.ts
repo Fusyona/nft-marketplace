@@ -26,8 +26,8 @@ const networkConfig: NetworkConfigInfo = {
     localhost: {},
     hardhat: {},
     nebulaTestnet: {
-        paymentTokenAddress: "0xd392bb3254CEa5E0B30B66e345a47940690E8577",
-        erc20MarketplaceAddress: "0x59813D10D151F015fF18ffb24Fc40a8762a4f489",
+        paymentTokenAddress: "0xF72B75f805BD5C3997202f23349A4C9Dc8c79de1",
+        erc20MarketplaceAddress: "0xEb257B3b3f1fFcc3497C0324d0608335347e63e6",
     },
     mumbai: {
         paymentTokenAddress: "0xBd5770d8647bd365b3D4EE0D7c5732c43a41C238",
