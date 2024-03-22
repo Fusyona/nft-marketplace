@@ -36,9 +36,20 @@ const config: HardhatUserConfig = {
             url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
             accounts: [PRIVATE_KEY!],
         },
+        taraxa: {
+            url: "https://rpc.mainnet.taraxa.io/",
+            chainId: 841,
+            accounts: [PRIVATE_KEY!],
+        },
+
         nebula: {
             chainId: 1482601649,
             url: "https://mainnet.skalenodes.com/v1/green-giddy-denebola",
+            accounts: [PRIVATE_KEY!],
+        },
+        "taraxa-testnet": {
+            url: "https://rpc.testnet.taraxa.io/",
+            chainId: 842,
             accounts: [PRIVATE_KEY!],
         },
         nebulaTestnet: {
@@ -63,12 +74,30 @@ const config: HardhatUserConfig = {
         },
         customChains: [
             {
+                network: "taraxa",
+                chainId: 841,
+                urls: {
+                    apiURL: "https://explorer.mainnet.taraxa.io/api",
+                    browserURL: "https://explorer.mainnet.taraxa.io/"
+                }
+            },
+            {
                 network: "nebula",
                 chainId: 1482601649,
                 urls: {
                     apiURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/api",
                     browserURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/",
                 },
+            },
+
+
+            {
+                network: "taraxa-testnet",
+                chainId: 842,
+                urls: {
+                    apiURL: "https://explorer.testnet.taraxa.io/api",
+                    browserURL: "https://explorer.testnet.taraxa.io/"
+                }
             },
             {
                 network: "nebulaTestnet",
