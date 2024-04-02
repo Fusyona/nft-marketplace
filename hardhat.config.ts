@@ -41,6 +41,11 @@ const config: HardhatUserConfig = {
             chainId: 841,
             accounts: [PRIVATE_KEY!],
         },
+        telos: {
+            url: "https://mainnet.telos.net/evm",
+            chainId: 40,
+            accounts: [PRIVATE_KEY!],
+        },
 
         nebula: {
             chainId: 1482601649,
@@ -57,6 +62,11 @@ const config: HardhatUserConfig = {
             url: "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet",
             accounts: [PRIVATE_KEY!],
         },
+        "telos-testnet": {
+            url: "https://testnet.telos.net/evm",
+            chainId: 41,
+            accounts: [PRIVATE_KEY!],
+        }
     },
     gasReporter: {
         enabled: true,
@@ -89,6 +99,14 @@ const config: HardhatUserConfig = {
                     browserURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/",
                 },
             },
+            {
+                network: "telos",
+                chainId: 40,
+                urls: {
+                    apiURL: "https://www.teloscan.io/api",
+                    browserURL: "https://www.teloscan.io",
+                },
+            },
 
 
             {
@@ -105,6 +123,14 @@ const config: HardhatUserConfig = {
                 urls: {
                     apiURL: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/api",
                     browserURL: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/",
+                },
+            },
+            {
+                network: "telos-testnet",
+                chainId: 41,
+                urls: {
+                    apiURL: "https://testnet.teloscan.io/api",
+                    browserURL: "https://testnet.teloscan.io/",
                 },
             },
         ],
