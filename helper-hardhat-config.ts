@@ -35,4 +35,7 @@ const networkConfig: NetworkConfigInfo = {
     mumbai: {
         paymentTokenAddress: "0xBd5770d8647bd365b3D4EE0D7c5732c43a41C238",
     },
+    "taraxa-testnet": {
+        paymentTokenAddress: "0x904dF3e5787580e32e61170eB695A94Cf7379E63",
+    },
 };

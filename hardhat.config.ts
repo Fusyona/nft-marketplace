@@ -27,6 +27,7 @@ const config: HardhatUserConfig = {
         buyer: {
             default: 3,
             nebulaTestnet: 0,
+            "taraxa-testnet": 0,
         },
         creator: 4,
     },
