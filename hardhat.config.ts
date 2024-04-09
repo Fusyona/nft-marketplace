@@ -16,7 +16,9 @@ const config: HardhatUserConfig = {
     solidity: "0.8.18",
     namedAccounts: {
         deployer: {
-            default: ACCOUNT ? ACCOUNT : "0x16c7C5849A6769d58F9df6A26960F3293EF379e0",
+            default: ACCOUNT
+                ? ACCOUNT
+                : "0x16c7C5849A6769d58F9df6A26960F3293EF379e0",
             hardhat: 0,
             localhost: 0,
         },
@@ -78,33 +80,34 @@ const config: HardhatUserConfig = {
                 chainId: 841,
                 urls: {
                     apiURL: "https://explorer.mainnet.taraxa.io/api",
-                    browserURL: "https://explorer.mainnet.taraxa.io/"
-                }
+                    browserURL: "https://explorer.mainnet.taraxa.io/",
+                },
             },
             {
                 network: "nebula",
                 chainId: 1482601649,
                 urls: {
                     apiURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/api",
-                    browserURL: "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/",
+                    browserURL:
+                        "https://green-giddy-denebola.explorer.mainnet.skalenodes.com/",
                 },
             },
-
 
             {
                 network: "taraxa-testnet",
                 chainId: 842,
                 urls: {
                     apiURL: "https://explorer.testnet.taraxa.io/api",
-                    browserURL: "https://explorer.testnet.taraxa.io/"
-                }
+                    browserURL: "https://explorer.testnet.taraxa.io/",
+                },
             },
             {
                 network: "nebulaTestnet",
                 chainId: 37084624,
                 urls: {
                     apiURL: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/api",
-                    browserURL: "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/",
+                    browserURL:
+                        "https://lanky-ill-funny-testnet.explorer.testnet.skalenodes.com/",
                 },
             },
         ],
