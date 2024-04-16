@@ -1,6 +1,6 @@
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 import { BigNumber, Contract, providers, ethers } from "ethers";
-import { Address, NotUndefined } from "./types";
+import { Address, NotUndefined } from "./marketplace-wrapper";
 import { NftIdRetriever } from "../typechain-types";
 
 export default class NftIdRetrieverWrapper {
