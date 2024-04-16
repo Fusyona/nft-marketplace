@@ -5,10 +5,12 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract NftIdRetriever {
 
-    function tokensOfOwner(address collectionAddress, address owner, uint startId, uint endId)
-    external 
-    view 
-    returns (uint[] memory) {
+    function tokensOfOwner(
+        address collectionAddress,
+        address owner,
+        uint startId,
+        uint endId
+    ) external view returns (uint[] memory) {
         IERC721 collection = IERC721(collectionAddress);
         uint tokenBalance= collection.balanceOf(owner);
         uint[] memory ownedIds = new uint[](tokenBalance);
