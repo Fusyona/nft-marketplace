@@ -1,12 +1,12 @@
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 import { BigNumber, Contract, providers, ethers } from "ethers";
-import { Address, NotUndefined } from "./marketplace-wrapper";
+import { Address, NotUndefined } from "./types";
 import { NftIdRetriever } from "../typechain-types";
 
 export default class NftIdRetrieverWrapper {
     private nftIdRetriever: NftIdRetriever;
     private provider: ethers.providers.Web3Provider;
-    
+
     constructor(
         tokenIdRetrieverAddress: Address,
         tokenIdRetrieverAbi: NotUndefined,
@@ -26,11 +26,13 @@ export default class NftIdRetrieverWrapper {
         startId: BigNumber | number,
         endId: BigNumber | number
     ) {
-        return await this.nftIdRetriever.tokensOfOwner(
+        const ownedIds = await this.nftIdRetriever.tokensOfOwner(
             collection,
             owner,
             startId,
             endId
         );
+        const idsToNumber = ownedIds.map((id) => id.toNumber());
+        return idsToNumber;
     }
 }
