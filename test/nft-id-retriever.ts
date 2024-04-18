@@ -1,11 +1,10 @@
-import { ethers, web3, deployments } from "hardhat";
+import { ethers, web3 } from "hardhat";
 import { EasyToken, NftIdRetriever } from "../typechain-types";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import NftIdRetrieverArtifact from "../artifacts/contracts/NftIdRetriever.sol/NftIdRetriever.json";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 import NftIdRetrieverWrapper from "../scripts/nftId-retriever-wrapper";
-import { contractNames } from "../utils/constants";
 
 describe("Retrieving NFT identifiers for a specific account address", () => {
     const startId = 1;
@@ -15,23 +14,30 @@ describe("Retrieving NFT identifiers for a specific account address", () => {
     let collection: EasyToken;
     let tokenRetriever: NftIdRetriever;
 
+    const deployerIndex = 0;
     let deployer: SignerWithAddress;
+    const userIndex = 3;
     let user: SignerWithAddress;
-
     let tokenIdRetrieverWrapper: NftIdRetrieverWrapper;
 
-    before(async () => {
-        [deployer, user] = await ethers.getSigners();
-    });
-
     beforeEach(async () => {
-        await deployments.fixture([ contractNames.EasyToken , contractNames.NftIdRetriever ])
 
-        tokenRetriever = await ethers.getContract(contractNames.NftIdRetriever)
-        collection = await ethers.getContract(contractNames.EasyToken)
+        const NftIdRetriever = await ethers.getContractFactory("NftIdRetriever");
+        tokenRetriever = await NftIdRetriever.deploy() as NftIdRetriever;
+
+        const tokenIdRetrieverAddress = tokenRetriever.address;
+
+        const EasyToken = await ethers.getContractFactory("EasyToken");
+        collection = await EasyToken.deploy() as EasyToken;
+
+        const signers = await ethers.getSigners();
+
+        deployer = signers[deployerIndex];
+
+        user = signers[userIndex];
 
         tokenIdRetrieverWrapper = new NftIdRetrieverWrapper(
-            tokenRetriever.address,
+            tokenIdRetrieverAddress,
             NftIdRetrieverArtifact.abi,
             web3.currentProvider as JsonRpcFetchFunc | ExternalProvider
         );
@@ -69,7 +75,7 @@ describe("Retrieving NFT identifiers for a specific account address", () => {
             );
 
             for (let i = 0; i <= 2; ++i) {
-                expect(tokensToMintForUser[i].toString()).to.equal(expectedOwnedids[i]);
+                expect(tokensToMintForUser[i]).to.equal(expectedOwnedids[i]);
             }
         });
     });
