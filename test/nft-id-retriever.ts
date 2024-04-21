@@ -2,7 +2,6 @@ import { ethers, web3 } from "hardhat";
 import { EasyToken, NftIdRetriever } from "../typechain-types";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import NftIdRetrieverArtifact from "../artifacts/contracts/NftIdRetriever.sol/NftIdRetriever.json";
 import { ExternalProvider, JsonRpcFetchFunc } from "@ethersproject/providers";
 import NftIdRetrieverWrapper from "../scripts/nftId-retriever-wrapper";
 
@@ -38,15 +37,14 @@ describe("Retrieving NFT identifiers for a specific account address", () => {
 
         tokenIdRetrieverWrapper = new NftIdRetrieverWrapper(
             tokenIdRetrieverAddress,
-            NftIdRetrieverArtifact.abi,
+            collection.address,
             web3.currentProvider as JsonRpcFetchFunc | ExternalProvider
         );
     });
 
     describe("Retrieve tokenIds from user's account", () => {
         it("should return the right tokenIds for a given user's address", async () => {
-            const collectionAddress = collection.address;
-
+           
             await collection
                 .connect(deployer)
                 .safeMint(deployer.address, 1);
@@ -68,7 +66,6 @@ describe("Retrieving NFT identifiers for a specific account address", () => {
                 .safeMint(user.address, tokensToMintForUser[2]);
 
             const expectedOwnedids = await tokenIdRetrieverWrapper.tokensOfOwner(
-                collectionAddress,
                 user.address,
                 startId,
                 endId
