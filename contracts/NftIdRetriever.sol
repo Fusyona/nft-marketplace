@@ -12,17 +12,21 @@ contract NftIdRetriever {
         uint endId
     ) external view returns (uint[] memory) {
         IERC721 collection = IERC721(collectionAddress);
-        uint tokenBalance= collection.balanceOf(owner);
+        uint tokenBalance = collection.balanceOf(owner);
         uint[] memory ownedIds = new uint[](tokenBalance);
         uint index;
 
-        while (startId <= endId && index <= tokenBalance) {
-            if (collection.ownerOf(startId) == owner) {
-                ownedIds[index] = startId;
-                ++index;                
-            }
-            ++startId;           
+        for (startId; startId <= endId; ++startId) {
+            try collection.ownerOf(startId) returns (address tokenOwner) {
+                if (tokenOwner == owner) {
+                    ownedIds[index] = startId;
+                    ++index;
+                }                
+            } catch  {
+                continue;                
+            }                       
         }
         return ownedIds;    
     }
+   
 }
