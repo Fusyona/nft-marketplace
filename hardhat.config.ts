@@ -33,6 +33,12 @@ const config: HardhatUserConfig = {
     },
     defaultNetwork: "hardhat",
     networks: {
+        coredao : {
+            url: "https://rpc.coredao.org/",
+            chainId: 1116,
+            accounts: [PRIVATE_KEY!],
+        },
+
         hardhat: {},
         mumbai: {
             chainId: 80001,
@@ -65,11 +71,20 @@ const config: HardhatUserConfig = {
             url: "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet",
             accounts: [PRIVATE_KEY!],
         },
+<<<<<<< HEAD
         "telos-testnet": {
             url: "https://testnet.telos.net/evm",
             chainId: 41,
             accounts: [PRIVATE_KEY!],
         }
+||||||| parent of c9d91c5 (chore: add coredao network to hardhat.config)
+=======
+        "coredao-testnet" : {
+            url: "https://rpc.test.btcs.network/",
+            chainId: 1115,
+            accounts: [PRIVATE_KEY!],
+        },
+>>>>>>> c9d91c5 (chore: add coredao network to hardhat.config)
     },
     gasReporter: {
         enabled: true,
@@ -84,6 +99,8 @@ const config: HardhatUserConfig = {
     etherscan: {
         apiKey: {
             nebula: MUMBAI_SCAN_KEY!,
+            coredao: MUMBAI_SCAN_KEY!,
+            "coredao-testnet": MUMBAI_SCAN_KEY!,
         },
         customChains: [
             {
@@ -121,6 +138,15 @@ const config: HardhatUserConfig = {
                 },
             },
             {
+                network: "coredao",
+                chainId: 1116,
+                urls: {
+                    apiURL: "https://scan.coredao.org/api",
+                    browserURL: "https://scan.coredao.org/"
+                }
+            },
+
+            {
                 network: "nebulaTestnet",
                 chainId: 37084624,
                 urls: {
@@ -136,6 +162,22 @@ const config: HardhatUserConfig = {
                     apiURL: "https://testnet.teloscan.io/api",
                     browserURL: "https://testnet.teloscan.io/",
                 },
+            },
+            {
+                network: "taraxa-testnet",
+                chainId: 842,
+                urls: {
+                    apiURL: "https://explorer.testnet.taraxa.io/api",
+                    browserURL: "https://explorer.testnet.taraxa.io/"
+                }
+            },
+            {
+                network: "coredao-testnet",
+                chainId: 115,
+                urls: {
+                    apiURL: "https://scan.test.btcs.network/api",
+                    browserURL: "https://scan.test.btcs.network/"
+                }
             },
         ],
     },
