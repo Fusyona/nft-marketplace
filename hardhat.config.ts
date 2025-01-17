@@ -33,16 +33,9 @@ const config: HardhatUserConfig = {
     },
     defaultNetwork: "hardhat",
     networks: {
-        coredao : {
-            url: "https://rpc.coredao.org/",
-            chainId: 1116,
-            accounts: [PRIVATE_KEY!],
-        },
-
-        hardhat: {},
-        mumbai: {
-            chainId: 80001,
-            url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
+        sei: {
+            chainId: 1329,
+            url: "https://evm-rpc.sei-apis.com",
             accounts: [PRIVATE_KEY!],
         },
         taraxa: {
@@ -50,15 +43,25 @@ const config: HardhatUserConfig = {
             chainId: 841,
             accounts: [PRIVATE_KEY!],
         },
+        nebula: {
+            chainId: 1482601649,
+            url: "https://mainnet.skalenodes.com/v1/green-giddy-denebola",
+            accounts: [PRIVATE_KEY!],
+        },
         telos: {
             url: "https://mainnet.telos.net/evm",
             chainId: 40,
             accounts: [PRIVATE_KEY!],
         },
+        coredao : {
+            url: "https://rpc.coredao.org/",
+            chainId: 1116,
+            accounts: [PRIVATE_KEY!],
+        },
 
-        nebula: {
-            chainId: 1482601649,
-            url: "https://mainnet.skalenodes.com/v1/green-giddy-denebola",
+        "sei-testnet": {
+            chainId: 1328,
+            url: "https://evm-rpc-testnet.sei-apis.com",
             accounts: [PRIVATE_KEY!],
         },
         "taraxa-testnet": {
@@ -71,20 +74,21 @@ const config: HardhatUserConfig = {
             url: "https://testnet.skalenodes.com/v1/lanky-ill-funny-testnet",
             accounts: [PRIVATE_KEY!],
         },
-<<<<<<< HEAD
         "telos-testnet": {
             url: "https://testnet.telos.net/evm",
             chainId: 41,
             accounts: [PRIVATE_KEY!],
-        }
-||||||| parent of c9d91c5 (chore: add coredao network to hardhat.config)
-=======
+        },
         "coredao-testnet" : {
             url: "https://rpc.test.btcs.network/",
             chainId: 1115,
             accounts: [PRIVATE_KEY!],
         },
->>>>>>> c9d91c5 (chore: add coredao network to hardhat.config)
+        mumbai: {
+            chainId: 80001,
+            url: `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`,
+            accounts: [PRIVATE_KEY!],
+        },
     },
     gasReporter: {
         enabled: true,
