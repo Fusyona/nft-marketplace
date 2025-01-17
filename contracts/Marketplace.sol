@@ -317,7 +317,7 @@ abstract contract Marketplace is
         address collection,
         uint256 nftId,
         uint256 price
-    ) external override {
+    ) public override {
         require(
             !isListed(collection, nftId),
             "Marketplace: NFT already listed"
@@ -436,7 +436,7 @@ abstract contract Marketplace is
         NFTForSale storage nft,
         Offer storage offer,
         uint256 newPriceOffer
-    ) private view {
+    ) internal view virtual {
         require(nft.listed, "Marketplace: NFT not listed");
         require(offer.isInitialized, "Marketplace: Offer not found");
         require(
