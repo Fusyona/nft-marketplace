@@ -8,7 +8,8 @@ export const contractNames = {
     MsgValuePaymentMarketplace: "MsgValuePaymentMarketplace",
     NebulaFaucet: "NebulaFaucet",
     NftIdRetriever: "NftIdRetriever",
-    EasyToken: "EasyToken"
+    EasyToken: "EasyToken",
+    MarketplaceWithoutCounterOffer: "MarketplaceWithoutCounterOffer"
 };
 
 export const deployArgs = {
