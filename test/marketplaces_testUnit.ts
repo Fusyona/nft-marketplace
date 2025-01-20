@@ -1,20 +1,18 @@
+import { deployments, ethers, web3 } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { assert, expect } from "chai";
 import { BigNumber, Signer } from "ethers";
-import { deployments, ethers, web3 } from "hardhat";
 import { Address, Deployment } from "hardhat-deploy/types";
-import MarketplaceWrapper from "../scripts/marketplace-wrapper";
-import { IERC1155, IERC721 } from "../typechain-types";
-import { toABDKMath64x64 } from "./utils";
-import MsgValuePaymentMarketplaceWrapper from "../scripts/msg-value-payment-marketplace-wrapper";
 import {
     ExternalProvider,
     JsonRpcFetchFunc,
-    JsonRpcProvider,
 } from "@ethersproject/providers";
-import { contractNames } from "../utils/constants";
 
-type SignerWithAddress = Signer & { address: Address };
+import MarketplaceWrapper from "../scripts/marketplace-wrapper";
+import MsgValuePaymentMarketplaceWrapper from "../scripts/msg-value-payment-marketplace-wrapper";
+import { toABDKMath64x64 } from "./utils";
+import { contractNames, SignerWithAddress } from "../utils/constants";
+import { IERC1155, IERC721 } from "../typechain-types";
 
 const MARKETPLACE_CONTRACT_NAME = contractNames.MsgValuePaymentMarketplace;
 

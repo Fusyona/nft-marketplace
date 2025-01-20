@@ -1,3 +1,6 @@
+import { Signer } from "ethers";
+import { Address } from "hardhat-deploy/types";
+
 export const contractNames = {
     Erc20PaymentMarketplace: "Erc20PaymentMarketplace",
     FusyERC721CollectionWithRoyaltySupport:
@@ -15,3 +18,5 @@ export const contractNames = {
 export const deployArgs = {
     ROYALTY_FEE_NUMERATOR: 1000,
 };
+
+export type SignerWithAddress = Signer & { address: Address };
